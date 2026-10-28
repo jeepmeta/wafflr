@@ -1,149 +1,45 @@
 # Screen catalog and visual review
 
-**Purpose:** review every distinct mobile screen/state and its asset needs before implementation. These editable SVG wireframes are draft references, not approved UI or a promise that every state needs a separate production screen. Review each mockup, annotate changes, and consolidate redundant layouts before app logic is built.
+**Purpose:** review each distinct mobile screen/state and its layout before feature implementation. The Markdown wireframes are deliberately plain, editable references—not approved production UI. Use them to adjust hierarchy and placement before committing to detailed styling or final artwork.
 
-## How to review
+Open [mockups.md](./mockups.md) for all wireframes. The IDs below are the stable screen inventory; the linked heading jumps to the corresponding sketch.
 
-Open each SVG in GitHub or a vector editor. Text, spacing, components, sprite placement, and transitions are provisional. Decide whether each state deserves a full screen, modal, toast, or transient animation. The catalog below is the source of truth for screen IDs.
+| ID | Screen / state | Purpose |
+|---|---|---|
+| `home` | [Home](./mockups.md#home) | Create or join a decision room. |
+| `your-rooms` | [Your Rooms modal](./mockups.md#your-rooms-modal) | Private Created/Joined counts and room history. |
+| `create-template` | [Choose template](./mockups.md#create-room--choose-template) | Where to Eat, What to Watch, What to Do, or Custom. |
+| `room-title` | [Room title](./mockups.md#create-room--title) | Name the room. |
+| `deck-mode` | [Deck mode](./mockups.md#create-room--deck-mode) | Choose host-built or guest-contributed deck; do not mix modes. |
+| `join-code` | [Enter code](./mockups.md#join-room--enter-code) | Enter a six-character room code. Codes are not credentials. |
+| `qr-scan` | [Scan QR](./mockups.md#join-room--scan-qr) | Scan a room QR code without embedding credentials in its payload. |
+| `room-transition` | [Room title transition](./mockups.md#room-title-transition) | Brief branded confirmation without host identity. |
+| `host-deck-builder` | [Host deck builder](./mockups.md#host-deck-builder) | Add/edit/remove choices; maximum 100 and at least two before voting. |
+| `guest-card-entry` | [Guest card entry](./mockups.md#guest-card-entry) | Add up to the configured quota of one, two, or three choices; unused slots may be skipped. |
+| `host-deck-review` | [Host deck review](./mockups.md#host-deck-review) | Review and edit/remove choices until voting starts. |
+| `guest-waiting` | [Guest waiting](./mockups.md#guest-waiting-for-host) | Wait while the host reviews and starts voting. |
+| `voting` | [Private voting](./mockups.md#private-voting) | Vote Yep/Nah privately, one card at a time. |
+| `vote-submitted` | [Vote submitted](./mockups.md#vote-submitted--waiting) | Confirm submission and show group progress without exposing individual votes. |
+| `round-reveal` | [Round reveal](./mockups.md#round-reveal) | Reveal the leader or explain that a tie-breaker follows; hide totals on the winner card. |
+| `vote-tallies` | [Vote tallies modal](./mockups.md#vote-tallies-modal-optional) | Optional detailed totals; remains an open MVP decision. |
+| `tie-breaker` | [Tie-breaker](./mockups.md#tie-breaker-round) | Vote on only the tied choices. |
+| `manual-winner` | [Manual winner](./mockups.md#host-chooses-winner-after-repeated-tie) | Host picks a winner after a repeated tie. |
+| `winner` | [Final winner](./mockups.md#final-winner) | Celebrate the result and return Home. |
+| `room-unavailable` | [Room unavailable](./mockups.md#room-unavailable--expired) | Recover from an expired, closed, or invalid room without identity leakage. |
+| `share-code` | [Share-code modal](./mockups.md#shared-modal-share-code) | Share room code and QR. |
+| `card-editor` | [Edit-choice modal](./mockups.md#shared-modal-edit-choice) | Shared editor with Save/Cancel. |
+| `remove-card-confirmation` | [Remove confirmation](./mockups.md#shared-modal-remove-choice-confirmation) | Confirm removal when it meaningfully prevents accidental loss. |
+| `end-voting-confirmation` | [End-voting confirmation](./mockups.md#shared-modal-end-voting-early) | Explain that submitted ballots count and missing ballots score zero. |
 
-## Screens
+## Shared states that do not need their own full wireframe
 
-### Home
-- **ID:** `home`
-- **Group:** Core
-- **Mockup:** [home.svg](mockups/home.svg)
-- **Purpose:** Primary entry point for creating or joining a decision room.
-
-### Your Rooms modal
-- **ID:** `your-rooms`
-- **Group:** Modal
-- **Mockup:** [your-rooms.svg](mockups/your-rooms.svg)
-- **Purpose:** Private Created/Joined counters and room history.
-
-### Create room: choose template
-- **ID:** `create-template`
-- **Group:** Create room
-- **Mockup:** [create-template.svg](mockups/create-template.svg)
-- **Purpose:** Select Where to Eat, What to Watch, What to Do, or Custom.
-
-### Create room: title
-- **ID:** `room-title`
-- **Group:** Create room
-- **Mockup:** [room-title.svg](mockups/room-title.svg)
-- **Purpose:** Name the room before configuring its deck.
-
-### Create room: deck mode
-- **ID:** `deck-mode`
-- **Group:** Create room
-- **Mockup:** [deck-mode.svg](mockups/deck-mode.svg)
-- **Purpose:** Choose host-built or guest-contributed deck; quota applies only to guest mode.
-
-### Join room: enter code
-- **ID:** `join-code`
-- **Group:** Join room
-- **Mockup:** [join-code.svg](mockups/join-code.svg)
-- **Purpose:** Enter a six-character room code. Room codes are not credentials.
-
-### Join room: scan QR
-- **ID:** `qr-scan`
-- **Group:** Join room
-- **Mockup:** [qr-scan.svg](mockups/qr-scan.svg)
-- **Purpose:** Scan a room QR code; payload must not contain participant credentials.
-
-### Room title transition
-- **ID:** `room-transition`
-- **Group:** Room states
-- **Mockup:** [room-transition.svg](mockups/room-transition.svg)
-- **Purpose:** Brief branded confirmation after joining, without host identity.
-
-### Host deck builder
-- **ID:** `host-deck-builder`
-- **Group:** Contribution
-- **Mockup:** [host-deck-builder.svg](mockups/host-deck-builder.svg)
-- **Purpose:** Host adds, edits, and removes choices; cap is 100 cards, minimum two before voting.
-
-### Guest card entry
-- **ID:** `guest-card-entry`
-- **Group:** Contribution
-- **Mockup:** [guest-card-entry.svg](mockups/guest-card-entry.svg)
-- **Purpose:** Guest adds up to the configured quota of one, two, or three choices; unused slots may be skipped.
-
-### Host deck review
-- **ID:** `host-deck-review`
-- **Group:** Contribution
-- **Mockup:** [host-deck-review.svg](mockups/host-deck-review.svg)
-- **Purpose:** Host reviews and edits/removes choices until voting starts.
-
-### Guest waiting for host
-- **ID:** `guest-waiting`
-- **Group:** Contribution
-- **Mockup:** [guest-waiting.svg](mockups/guest-waiting.svg)
-- **Purpose:** Guest waits while host reviews and starts voting.
-
-### Private voting
-- **ID:** `voting`
-- **Group:** Voting
-- **Mockup:** [voting.svg](mockups/voting.svg)
-- **Purpose:** Private Yep/Nah card voting.
-
-### Vote submitted / waiting
-- **ID:** `vote-submitted`
-- **Group:** Voting
-- **Mockup:** [vote-submitted.svg](mockups/vote-submitted.svg)
-- **Purpose:** Confirmation and progress while waiting for round closure.
-
-### Round reveal and results
-- **ID:** `round-reveal`
-- **Group:** Results
-- **Mockup:** [round-reveal.svg](mockups/round-reveal.svg)
-- **Purpose:** Show winner or tied leaders. Winner card does not display vote totals.
-
-### Vote tallies modal
-- **ID:** `vote-tallies`
-- **Group:** Modal
-- **Mockup:** [vote-tallies.svg](mockups/vote-tallies.svg)
-- **Purpose:** Optional tally modal sorted by Yep total; keep as a product decision until approved.
-
-### Tie-breaker round
-- **ID:** `tie-breaker`
-- **Group:** Results
-- **Mockup:** [tie-breaker.svg](mockups/tie-breaker.svg)
-- **Purpose:** A smaller voting deck containing only tied leaders.
-
-### Host chooses winner after repeated tie
-- **ID:** `manual-winner`
-- **Group:** Results
-- **Mockup:** [manual-winner.svg](mockups/manual-winner.svg)
-- **Purpose:** Host manually chooses the final winner after a repeated tie.
-
-### Final winner
-- **ID:** `winner`
-- **Group:** Results
-- **Mockup:** [winner.svg](mockups/winner.svg)
-- **Purpose:** Celebratory final result and route back to Home.
-
-### Room unavailable / expired
-- **ID:** `room-unavailable`
-- **Group:** System states
-- **Mockup:** [room-unavailable.svg](mockups/room-unavailable.svg)
-- **Purpose:** Recovery for expired, closed, or invalid rooms without identity leakage.
-
-## Shared modal mockups
-
-- **Share code:** [share-code.svg](mockups/share-code.svg) — reusable from collection, voting, tie-breaker, and room history.
-- **Edit choice:** [card-editor.svg](mockups/card-editor.svg) — shared editor with Save/Cancel.
-- **Remove choice confirmation:** [remove-card-confirmation.svg](mockups/remove-card-confirmation.svg) — use only when confirmation meaningfully prevents accidental loss.
-- **End voting early:** [end-voting-confirmation.svg](mockups/end-voting-confirmation.svg) — explains that submitted ballots count and missing ballots score zero.
-
-## Shared states that do not need their own full-screen mockup
-
-Invalid code, room full, rate limited, already joined, QR permission denied/scan failure, one-minute contribution countdown/warning, 100/100 card cap, fewer than two cards, pressed/swipe feedback, connection loss/recovery, loading, saved/removed/submitted toasts, and ballot submit validation. Choose inline, toast, modal, or full-screen treatment during review.
+Invalid code, room full, rate limited, already joined, QR permission denied/scan failure, one-minute contribution countdown/warning, 100/100 card cap, fewer than two choices, pressed/swipe feedback, connection loss/recovery, loading, saved/removed/submitted toasts, and ballot submit validation can be inline, toast, modal, or transient states.
 
 ## Open decisions
 
-- Persistent header visibility during focused voting and reveal.
-- Whether QR scanning uses in-app camera access or a platform scanner flow.
-- Whether every card must be explicitly rated before ballot submission or unvoted cards count as zero. Do not silently implement conflicting rules.
+- Whether the header stays visible during voting and results.
+- In-app camera scanning versus a platform QR scanner.
+- Whether every choice must be rated before submission or unrated choices score zero.
 - Whether vote tallies belong in the MVP.
 - Exact room expiry and completed-room retention.
-- Which character states merit distinct artwork versus reuse of one sprite with layout/animation changes.
+- Which character states need separate art versus reuse.
