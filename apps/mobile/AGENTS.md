@@ -1,41 +1,36 @@
-This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
+# Mobile app instructions
 
-## Expo has changed — do not trust your training data
+This workspace is the native Wafflr application for iOS and Android, built with Expo, React Native, and Expo Router.
 
-Expo ships breaking changes every SDK release. APIs you remember are likely renamed, moved, or removed. Before writing any code that touches an Expo, EAS, or React Native API:
+## Before changing Expo or native dependencies
 
-1. Read the major version of the `expo` package in `package.json`.
-2. Fetch the matching versioned docs: `https://docs.expo.dev/versions/v<major>.0.0/`
-3. For anything else, fetch https://docs.expo.dev/llms.txt — an index of all Expo docs with corrections to common LLM misconceptions. Follow its links to the specific page you need; never answer from memory.
+1. Read the installed Expo SDK version from `package.json`.
+2. Consult the matching versioned documentation at https://docs.expo.dev/versions/ and the current API's specific documentation.
+3. Use `pnpm exec expo install <package>` (or the matching package-manager invocation) to select Expo-compatible native package versions.
+4. Run Expo Doctor after changing native dependencies or app configuration.
 
-## Commands
+Do not assume an API from a different Expo SDK is still valid.
 
-Use `bunx` instead of `npx` if the project uses bun (`bun.lock` present).
+## Architecture
 
-```bash
-npx expo install <package>  # ALWAYS use instead of npm/yarn/pnpm/bun add — resolves SDK-compatible versions
-npx expo start              # start the dev server
-npx expo lint               # lint
-npx tsc --noEmit            # typecheck
-npx expo-doctor             # diagnose dependency and config issues
-npx expo install --fix      # fix incompatible package versions
-```
+- Route files belong in `src/app/`; reusable components, hooks, services, and feature modules belong outside the route directory.
+- Use Expo Router for navigation.
+- Use React Native `StyleSheet` and `@wafflr/design-tokens` for styling. Do not introduce Tailwind/NativeWind as the app's styling foundation.
+- Keep screens thin. Put domain rules in `@wafflr/game-engine`, cross-boundary contracts in `@wafflr/shared-types`, and backend access behind feature/service boundaries.
+- Prefer branded WebP assets for game UI and Butters artwork. Keep source artwork and generated/exported assets organized and inventoried.
+- Respect reduced-motion preferences and keep animation purposeful and brief.
+- Do not build a web game. Any web-compatible files should support development/preview or the separate landing experience, not a browser-based game product.
 
-Run lint and typecheck before declaring any task done.
+## Security and state
 
-## Navigation & Routing
+- Store anonymous participant credentials using secure device storage, never ordinary preferences or URL parameters.
+- Room codes do not authorize protected operations.
+- Never trust client-calculated winner state or realtime payloads. Treat the backend as authoritative.
+- Never place service-role keys or private server secrets in Expo config or client environment variables.
 
-- Use **Expo Router** for all navigation. Routes live in `src/app/` — every file there is a screen, `_layout.tsx` files define navigators. Keep non-route code (components, hooks, utils) outside `src/app/`.
-- Import `Link`, `router`, and `useLocalSearchParams` from `expo-router`.
-- Docs: https://docs.expo.dev/router/introduction.md
+## Verification
 
-## Building with EAS
-
-Use EAS to build, sign, and submit the app in the cloud (`eas build`, `eas submit`) and to ship over-the-air updates (`eas update`) — no local Xcode or Android Studio required. Run EAS CLI as `bunx eas-cli <command>` in Bun projects, or `npx eas-cli@latest <command>` otherwise; substitute that for bare `eas` in docs examples.
-Docs: https://docs.expo.dev/eas/index.md
-
-## Rules
-
-- If `ios/` and `android/` directories do not exist, they are generated (Continuous Native Generation). Never create or edit them by hand — configure native behavior in `app.json` and config plugins.
-- Expo Go only includes its bundled native modules. After adding a library with native code, the app needs a development build: `npx expo run:ios|android` locally, or `eas build --profile development`.
-- Prefer recommended Expo modules over third-party libraries, and check your available skills before adding dependencies. Docs: https://docs.expo.dev/versions/latest/index.md
+- Run `pnpm check-types` and relevant tests before declaring a change complete.
+- Run `pnpm exec expo-doctor` after native dependency/config changes.
+- Check iOS and Android implications for platform-specific code.
+- Use `pnpm --filter @wafflr/mobile start` to start the Expo development server.
