@@ -6,6 +6,7 @@ This is the canonical index for Wafflr's product and engineering documentation. 
 
 - [Product brief](product/product-brief.md) — purpose, positioning, MVP scope, and validation assumptions.
 - [Core journeys](product/core-journeys.md) — host, guest, and round flows.
+- [Screen design workspace](screens/README.md) — all screen mockups, screen catalog, sprite placements, and asset audit.
 - [Brand direction](brand/brand-direction.md) — visual and interaction principles.
 
 ## Architecture and engineering
