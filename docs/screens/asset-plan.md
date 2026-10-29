@@ -14,7 +14,7 @@ This is a **provisional target manifest**, not an instruction to generate every 
 ## Core visual roles to preserve or source
 
 | ID | Target filename | Used by | Status before audit | Reuse guidance |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | BRAND-01 | `brand/wafflr-wordmark.webp` | Home, persistent header, landing | Audit existing | One wordmark; no per-screen copies |
 | BUT-01 | `characters/butters/butters-neutral.webp` | Home, room transition, general waiting | Audit existing | Reuse neutral pose at different sizes |
 | BUT-02 | `characters/butters/butters-encouraging.webp` | Contribution and vote-submitted waiting | Audit existing | Optional if neutral pose communicates well |
@@ -46,7 +46,7 @@ Do not create individual primary/secondary buttons for every label. Button label
 ## Screen-to-asset map
 
 | Screen IDs | Expected reusable artwork |
-|---|---|
+| --- | --- |
 | Home, room transition | Wordmark + Butters neutral |
 | Template selection | Four template illustrations/icons |
 | Room title, deck mode, join code, QR scan | Wordmark; existing generic controls; no unique background art |
