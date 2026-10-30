@@ -31,6 +31,10 @@ Mobile environment variables are documented in `apps/mobile/.env.example`:
 
 Only the public anon key belongs in the mobile app. Never add a service-role key to an Expo environment variable or client bundle.
 
+## Database smoke test
+
+A rollback-only SQL smoke test is available at `supabase/tests/room_bootstrap.sql`. It checks anon RPC grants, direct table-read restrictions, room-code shape, credential hashing, case-insensitive joining, participant counts, and invalid input rejection. Run it only against a disposable local Supabase database after applying the migration. It has been added to the repository but has not been executed in this environment.
+
 ## Next implementation milestone
 
 Make real room creation and joining work from two separate devices:
