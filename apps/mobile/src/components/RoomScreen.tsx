@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, radii, spacing } from '@wafflr/design-tokens';
 import type { DecisionCard, RoomSummary, VoteChoice } from '@wafflr/shared-types';
 import { addCard, chooseWinner, deleteCard, getRoundResult, listCards, startTieBreak, startVoting, submitBallot, updateCard } from '../lib/rooms-api';
+import { createLocalSimulatorGuest, getActiveLocalParticipantRole, switchLocalSimulatorToCreator } from '../lib/local-database';
 
 type Props = { room: RoomSummary & { status?: 'Created' | 'Joined' }; onBack: () => void };
 type RoundState = { phase: string; round: number; winner?: DecisionCard; tiedCards?: DecisionCard[]; scores?: { cardId: string; yepCount: number }[] };
@@ -24,8 +25,7 @@ export default function RoomScreen({ room, onBack }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-
-  const isCreator = room.status === undefined || room.status === 'Created';
+  const [isCreator, setIsCreator] = useState(room.status === undefined || room.status === 'Created');
   const visibleCards = roundCards ?? cards;
   const voteComplete = visibleCards.length >= 2 && visibleCards.every(card => votes[card.id]);
   const titleForPhase = round.phase === 'completed' ? 'We have a winner!' :
@@ -33,8 +33,9 @@ export default function RoomScreen({ room, onBack }: Props) {
     round.phase === 'round_reveal' ? 'It’s a tie!' : 'Build the deck';
 
   const refresh = async () => {
-    const [nextCards, result] = await Promise.all([listCards(room.id), getRoundResult(room.id)]);
+    const [nextCards, result, role] = await Promise.all([listCards(room.id), getRoundResult(room.id), getActiveLocalParticipantRole(room.id)]);
     setCards(nextCards);
+    setIsCreator(role === 'creator');
     if (result) {
       setRound(result);
       if (result.tiedCards) setRoundCards(result.tiedCards);
@@ -42,6 +43,28 @@ export default function RoomScreen({ room, onBack }: Props) {
   };
 
   useEffect(() => { void refresh().catch(cause => setError(cause instanceof Error ? cause.message : 'Could not load this room.')); }, [room.id]);
+
+  const addSimulatorGuest = async () => {
+    setBusy(true); setError(''); setNotice('');
+    try {
+      await createLocalSimulatorGuest(room.id);
+      setVotes({});
+      await refresh();
+      setNotice('Switched to an anonymous guest. You can now contribute and vote as that participant.');
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not add a simulator participant.'); }
+    finally { setBusy(false); }
+  };
+
+  const returnToCreator = async () => {
+    setBusy(true); setError(''); setNotice('');
+    try {
+      await switchLocalSimulatorToCreator(room.id);
+      setVotes({});
+      await refresh();
+      setNotice('Switched back to the room creator.');
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not switch participants.'); }
+    finally { setBusy(false); }
+  };
 
   const saveChoice = async () => {
     if (!title.trim() || busy) return;
@@ -120,6 +143,11 @@ export default function RoomScreen({ room, onBack }: Props) {
       <Text style={s.eyebrow}>{room.template.toUpperCase().replace('_', ' ')} · {round.phase.toUpperCase().replace('_', ' ')}</Text>
       <Text style={s.heading}>{titleForPhase}</Text>
       <Text style={s.subtitle}>{room.title}</Text>
+      {__DEV__ && <View style={s.simulatorPanel}>
+        <Text style={s.simulatorLabel}>LOCAL TESTING · {isCreator ? 'CREATOR' : 'GUEST'}</Text>
+        <Action title={busy ? 'Switching…' : isCreator ? '＋ Add guest & switch' : '↩ Switch to creator'} quiet onPress={() => void (isCreator ? addSimulatorGuest() : returnToCreator())} disabled={busy} />
+        <Text style={s.simulatorHint}>Development only. Each simulated participant has a separate anonymous credential.</Text>
+      </View>}
 
       {round.phase === 'collecting' && <>
         {(room.mode === 'guests' || isCreator) && <View style={s.panel}>
@@ -192,6 +220,10 @@ export default function RoomScreen({ room, onBack }: Props) {
 
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.white },
+  simulatorPanel: { marginBottom: spacing.md, padding: spacing.md, borderRadius: radii.lg, borderWidth: 1, borderStyle: 'dashed', borderColor: '#B9A9C7', backgroundColor: '#F8F3FC', gap: 6 },
+  simulatorLabel: { color: '#6E4A87', fontSize: 10, fontWeight: '900', letterSpacing: 1.2 },
+  simulatorHint: { color: '#746B70', fontSize: 10, lineHeight: 14 },
+
   header: { minHeight: 58, paddingHorizontal: spacing.lg, borderBottomWidth: 2, borderBottomColor: colors.cream, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   back: { paddingVertical: 10, minWidth: 76 }, backText: { color: colors.ink, fontWeight: '800', fontSize: 15 },
   brand: { color: colors.ink, fontWeight: '900', letterSpacing: 2, fontSize: 17 },
