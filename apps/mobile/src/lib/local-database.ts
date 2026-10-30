@@ -1,5 +1,6 @@
 import * as Crypto from 'expo-crypto';
 import * as SQLite from 'expo-sqlite';
+import { Platform } from 'react-native';
 import type { DecisionTemplate, RoomMode, RoomPhase, RoomSummary } from '@wafflr/shared-types';
 
 const DATABASE_NAME = 'wafflr-local.db';
@@ -142,12 +143,19 @@ async function saveHistory(room: RoomSummary, status: 'Created' | 'Joined') {
   await saveRoomHistory({ ...room, status });
 }
 
+function assertNativeLocalDatabase() {
+  if (Platform.OS === 'web') {
+    throw new Error('The local SQLite backend is currently enabled for iOS and Android. Web support will be added separately.');
+  }
+}
+
 export async function createLocalRoom(input: {
   title: string;
   template: DecisionTemplate;
   mode: RoomMode;
   cardsPerGuest?: 1 | 2 | 3;
 }): Promise<{ room: RoomSummary }> {
+  assertNativeLocalDatabase();
   const title = input.title.trim();
   if (title.length < 1 || title.length > 80) throw new Error('Room title must be between 1 and 80 characters.');
   if (input.mode === 'guests' && ![1, 2, 3].includes(input.cardsPerGuest ?? 0)) {
@@ -210,6 +218,7 @@ export async function createLocalRoom(input: {
 }
 
 export async function joinLocalRoom(rawCode: string): Promise<{ room: RoomSummary }> {
+  assertNativeLocalDatabase();
   const code = rawCode.trim().toUpperCase();
   if (!/^[A-Z0-9]{6}$/.test(code)) throw new Error('Enter a valid six-character room code.');
 
@@ -257,6 +266,7 @@ export async function joinLocalRoom(rawCode: string): Promise<{ room: RoomSummar
 }
 
 export async function listLocalRooms(): Promise<RoomSummary[]> {
+  assertNativeLocalDatabase();
   const database = await getLocalDatabase();
   const rows = await database.getAllAsync<LocalRoomRow>(
     `SELECT r.*, COUNT(p.id) AS guest_count
