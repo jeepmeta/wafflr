@@ -139,7 +139,6 @@ export default function HomeScreen() {
     return () => clearTimeout(timer);
   }, [screen]);
   const handleRoomSuccess = (room: RoomSummary) => { setRecentRoom(room); };
-  const goWinner = () => { setRooms(false); setSetupMode(null); setScreen('winner'); };
   const beginCreate = () => { setTemplate('Where to Eat'); setRoomTitle(''); setSetupMode('create'); };
   const beginJoin = () => { setJoinCode(''); setSetupMode('join'); };
   return <SafeAreaView style={s.safe} edges={['top', 'left', 'right', 'bottom']}><View style={s.shell}>
