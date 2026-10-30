@@ -95,6 +95,11 @@ function SetupFlow({
 export default function HomeScreen() {
   const [screen, setScreen] = useState<'home' | 'winner'>('home');
   const [rooms, setRooms] = useState(false);
+  const [setupMode, setSetupMode] = useState<SetupMode>(null);
+  const [template, setTemplate] = useState<Template>('Where to Eat');
+  const [roomTitle, setRoomTitle] = useState('');
+  const [joinCode, setJoinCode] = useState('');
+  const [deckMode, setDeckMode] = useState<'host' | 'guests'>('host');
   const [backVisible, setBackVisible] = useState(false);
   const { width } = useWindowDimensions();
   useEffect(() => {
