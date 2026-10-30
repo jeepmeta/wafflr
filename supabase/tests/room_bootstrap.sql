@@ -10,7 +10,7 @@ do $$
 declare
   created jsonb;
   joined jsonb;
-  room_id uuid;
+  v_room_id uuid;
   room_code text;
   raw_credential text;
   stored_hash bytea;
@@ -39,7 +39,7 @@ begin
     raise exception 'create-room response is missing room object';
   end if;
 
-  room_id := (created #>> '{room,id}')::uuid;
+  v_room_id := (created #>> '{room,id}')::uuid;
   room_code := created #>> '{room,code}';
   raw_credential := created ->> 'participantCredential';
 
@@ -55,7 +55,7 @@ begin
 
   select p.credential_hash into stored_hash
   from public.room_participants as p
-  where p.room_id = room_id
+  where p.v_room_id = v_room_id
     and p.role = 'creator';
 
   if stored_hash is null or stored_hash <> extensions.digest(raw_credential, 'sha256') then
@@ -64,7 +64,7 @@ begin
 
   joined := public.wafflr_join_room(lower(room_code));
 
-  if joined #>> '{room,id}' <> room_id::text then
+  if joined #>> '{room,id}' <> v_room_id::text then
     raise exception 'case-insensitive join returned a different room';
   end if;
   if joined #>> '{room,guestCount}' <> '2' then
@@ -76,7 +76,7 @@ begin
 
   select count(*)::integer into guest_count
   from public.room_participants
-  where room_participants.room_id = room_id;
+  where room_participants.v_room_id = v_room_id;
 
   if guest_count <> 2 then
     raise exception 'expected two participant records, found %', guest_count;
