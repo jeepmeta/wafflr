@@ -633,5 +633,31 @@ export async function getLocalRoundResult(roomId: string): Promise<LocalRoundRes
     );
     if (row) return { phase: 'completed', round: room.current_round, winner: { id: row.id, title: row.title, ...(row.category ? { category: row.category } : {}), ...(row.location ? { location: row.location } : {}) } };
   }
+  if (room.phase === 'round_reveal') {
+    const previousRound = room.current_round - 1;
+    const scores = await database.getAllAsync<{ card_id: string; yep_count: number }>(
+      `SELECT rc.card_id,
+        SUM(CASE WHEN b.id IS NOT NULL AND bv.choice = 'yep' THEN 1 ELSE 0 END) AS yep_count
+       FROM round_cards rc
+       LEFT JOIN ballots b ON b.room_id = rc.room_id AND b.round_number = rc.round_number
+       LEFT JOIN ballot_votes bv ON bv.ballot_id = b.id AND bv.card_id = rc.card_id
+       WHERE rc.room_id = ? AND rc.round_number = ?
+       GROUP BY rc.card_id ORDER BY yep_count DESC`,
+      roomId, previousRound,
+    );
+    const highest = Math.max(...scores.map(score => score.yep_count));
+    const leaders = scores.filter(score => score.yep_count === highest);
+    const tiedCards = await Promise.all(leaders.map(async leader => {
+      const row = await database.getFirstAsync<LocalCardRow>(
+        'SELECT id, title, category, location FROM cards WHERE id = ?', leader.card_id,
+      );
+      return row ? { id: row.id, title: row.title, ...(row.category ? { category: row.category } : {}), ...(row.location ? { location: row.location } : {}) } : null;
+    }));
+    return {
+      phase: 'round_reveal', round: room.current_round,
+      scores: scores.map(score => ({ cardId: score.card_id, yepCount: score.yep_count })),
+      tiedCards: tiedCards.filter((item): item is DecisionCard => item !== null),
+    };
+  }
   return { phase: room.phase, round: room.current_round };
 }
