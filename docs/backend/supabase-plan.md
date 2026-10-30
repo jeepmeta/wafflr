@@ -1,6 +1,12 @@
 # Supabase backend plan
 
-## Intended responsibilities
+## Current development backend
+
+The mobile app now defaults to a device-local SQLite backend implemented with Expo SQLite. See `docs/backend/local-sqlite.md` for the schema, limitations, and development workflow. Room creation and joining no longer require Supabase configuration or network access.
+
+The SQL migration below remains a draft reference for the future PostgreSQL/Supabase adapter. It has not been applied to a Supabase project.
+
+## Intended Supabase responsibilities
 
 Supabase is the persistence and realtime layer. The backend—not the mobile client—owns authorization, validation, state transitions, and decision results.
 
