@@ -5,8 +5,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, radii, spacing } from '@wafflr/design-tokens';
 import type { DecisionTemplate, RoomSummary } from '@wafflr/shared-types';
 import { createRoom, joinRoom } from '../lib/rooms-api';
+import { getSavedRooms, type SavedRoom } from '../lib/participant-credentials';
 
-type Room = RoomSummary & { status: 'Created' | 'Joined' };
+type Room = SavedRoom;
 type SetupMode = 'create' | 'join' | null;
 type Template = 'Where to Eat' | 'What to Watch' | 'What to Do' | 'Custom';
 
@@ -130,6 +131,7 @@ export default function HomeScreen() {
   const [recentRoom, setRecentRoom] = useState<RoomSummary | null>(null);
   const [savedRooms, setSavedRooms] = useState<Room[]>([]);
   const { width } = useWindowDimensions();
+  useEffect(() => { void getSavedRooms().then(setSavedRooms).catch(() => undefined); }, []);
   useEffect(() => {
     if (screen !== 'winner') { setBackVisible(false); return; }
     const timer = setTimeout(() => setBackVisible(true), 2200);
