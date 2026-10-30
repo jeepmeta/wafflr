@@ -35,7 +35,10 @@ export default function RoomScreen({ room, onBack }: Props) {
   const refresh = async () => {
     const [nextCards, result] = await Promise.all([listCards(room.id), getRoundResult(room.id)]);
     setCards(nextCards);
-    if (result) setRound(result);
+    if (result) {
+      setRound(result);
+      if (result.tiedCards) setRoundCards(result.tiedCards);
+    }
   };
 
   useEffect(() => { void refresh().catch(cause => setError(cause instanceof Error ? cause.message : 'Could not load this room.')); }, [room.id]);
