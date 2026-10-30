@@ -55,7 +55,7 @@ begin
 
   select p.credential_hash into stored_hash
   from public.room_participants as p
-  where p.v_room_id = v_room_id
+  where p.room_id = v_room_id
     and p.role = 'creator';
 
   if stored_hash is null or stored_hash <> extensions.digest(raw_credential, 'sha256') then
@@ -76,7 +76,7 @@ begin
 
   select count(*)::integer into guest_count
   from public.room_participants
-  where room_participants.v_room_id = v_room_id;
+  where room_participants.room_id = v_room_id;
 
   if guest_count <> 2 then
     raise exception 'expected two participant records, found %', guest_count;
