@@ -6,6 +6,7 @@ import type { DecisionTemplate, RoomMode, RoomPhase, RoomSummary } from '@wafflr
 const DATABASE_NAME = 'wafflr-local.db';
 const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const ROOM_LIFETIME_MS = 24 * 60 * 60 * 1000;
+const SCHEMA_VERSION = 2;
 
 type LocalRoomRow = {
   id: string;
@@ -53,7 +54,8 @@ function toRoomSummary(row: LocalRoomRow): RoomSummary {
 async function migrate(database: SQLite.SQLiteDatabase) {
   await database.execAsync('PRAGMA foreign_keys = ON;');
   const version = await database.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
-  if ((version?.user_version ?? 0) >= 1) return;
+  const currentVersion = version?.user_version ?? 0;
+  if (currentVersion >= SCHEMA_VERSION) return;
 
   await database.withTransactionAsync(async () => {
     await database.execAsync(`
@@ -113,8 +115,20 @@ async function migrate(database: SQLite.SQLiteDatabase) {
       CREATE INDEX IF NOT EXISTS participants_room_id_idx ON participants(room_id);
       CREATE INDEX IF NOT EXISTS cards_room_id_idx ON cards(room_id);
       CREATE INDEX IF NOT EXISTS ballots_room_id_idx ON ballots(room_id);
-      PRAGMA user_version = 1;
     `);
+    if (currentVersion < 1) await database.execAsync('PRAGMA user_version = 1;');
+    if (currentVersion < 2) {
+      await database.execAsync(`
+        CREATE TABLE IF NOT EXISTS room_join_attempts (
+          code TEXT PRIMARY KEY NOT NULL COLLATE NOCASE,
+          window_started_at TEXT NOT NULL,
+          attempt_count INTEGER NOT NULL CHECK(attempt_count >= 1)
+        );
+        CREATE INDEX IF NOT EXISTS room_join_attempts_window_idx
+          ON room_join_attempts(window_started_at);
+        PRAGMA user_version = 2;
+      `);
+    }
   });
 }
 
@@ -123,6 +137,9 @@ export async function getLocalDatabase() {
     databasePromise = SQLite.openDatabaseAsync(DATABASE_NAME).then(async database => {
       await migrate(database);
       return database;
+    }).catch(error => {
+      databasePromise = undefined;
+      throw error;
     });
   }
   return databasePromise;
@@ -131,11 +148,6 @@ export async function getLocalDatabase() {
 async function saveCredential(roomId: string, credential: string) {
   const SecureStore = await import('expo-secure-store');
   await SecureStore.setItemAsync(`wafflr:participant:${roomId}`, credential);
-}
-
-async function removeCredential(roomId: string) {
-  const SecureStore = await import('expo-secure-store');
-  await SecureStore.deleteItemAsync(`wafflr:participant:${roomId}`);
 }
 
 async function saveHistory(room: RoomSummary, status: 'Created' | 'Joined') {
@@ -223,6 +235,19 @@ export async function joinLocalRoom(rawCode: string): Promise<{ room: RoomSummar
   if (!/^[A-Z0-9]{6}$/.test(code)) throw new Error('Enter a valid six-character room code.');
 
   const database = await getLocalDatabase();
+  const attempt = await database.getFirstAsync<{ window_started_at: string; attempt_count: number }>(
+    'SELECT window_started_at, attempt_count FROM room_join_attempts WHERE code = ?',
+    code,
+  );
+  const windowExpired = !attempt || Date.now() - new Date(attempt.window_started_at).getTime() > 5 * 60 * 1000;
+  const attemptCount = windowExpired ? 1 : attempt.attempt_count + 1;
+  await database.runAsync(
+    `INSERT INTO room_join_attempts (code, window_started_at, attempt_count) VALUES (?, ?, ?)
+     ON CONFLICT(code) DO UPDATE SET window_started_at = excluded.window_started_at, attempt_count = excluded.attempt_count`,
+    code, windowExpired ? nowIso : attempt.window_started_at, attemptCount,
+  );
+  if (attemptCount > 5) throw new Error('Too many attempts. Wait a few minutes and try again.');
+
   const room = await database.getFirstAsync<LocalRoomRow>(
     'SELECT * FROM rooms WHERE code = ? COLLATE NOCASE',
     code,
