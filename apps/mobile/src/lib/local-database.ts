@@ -347,7 +347,7 @@ async function requireLocalParticipant(database: SQLite.SQLiteDatabase, roomId: 
 export async function listLocalCards(roomId: string): Promise<DecisionCard[]> {
   assertNativeLocalDatabase();
   const database = await getLocalDatabase();
-  await requireLocalParticipant(database, roomId);
+  const participant = await requireLocalParticipant(database, roomId);
   const rows = await database.getAllAsync<LocalCardRow>(
     'SELECT id, title, category, location, participant_id FROM cards WHERE room_id = ? ORDER BY created_at ASC',
     roomId,
