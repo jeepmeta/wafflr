@@ -249,6 +249,10 @@ export async function joinLocalRoom(rawCode: string): Promise<{ room: RoomSummar
   );
   if (attemptCount > 5) throw new Error('Too many attempts. Wait a few minutes and try again.');
 
+  const SecureStore = await import('expo-secure-store');
+  const existingCredential = await SecureStore.getItemAsync(`wafflr:participant:${(await database.getFirstAsync<{ id: string }>('SELECT id FROM rooms WHERE code = ? COLLATE NOCASE', code))?.id ?? ''}`);
+  if (existingCredential) throw new Error('This device is already participating in that room.');
+
   const room = await database.getFirstAsync<LocalRoomRow>(
     'SELECT * FROM rooms WHERE code = ? COLLATE NOCASE',
     code,
