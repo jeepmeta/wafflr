@@ -18,7 +18,7 @@ The first schema version contains:
 
 Room codes are six characters and case-insensitive. They identify a room but do not authorize access. Each participant receives a separate random 256-bit credential. The raw credential is stored in Expo SecureStore; SQLite stores only its SHA-256 hash.
 
-Create Room and Join Room now call the local SQLite adapter. No Supabase URL, anon key, RPC, or remote request is required. The existing room history remains a local convenience.
+The UI calls the backend-independent contract in `apps/mobile/src/lib/room-repository.ts`. The active implementation is `local-room-repository.ts`, backed by `local-database.ts`. Create Room and Join Room therefore use local SQLite by default. No Supabase URL, anon key, RPC, or remote request is required. The existing room history remains a local convenience.
 
 ## Local-only behavior and limitations
 
@@ -30,7 +30,7 @@ The current migration creates the tables needed for the game flow, but card oper
 
 ## Development
 
-Install the Expo SDK 58-compatible packages and regenerate the pnpm lockfile:
+Install the Expo SDK 58-compatible packages and regenerate the pnpm lockfile (the package manifest has been updated; the lockfile still needs this install step):
 
 ```sh
 pnpm install
