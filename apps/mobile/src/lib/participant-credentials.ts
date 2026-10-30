@@ -28,7 +28,7 @@ const roomHistoryKey = 'wafflr:room-history';
 export async function saveRoomHistory(room: SavedRoom) {
   if (Platform.OS === 'web') return;
   const existing = await getSavedRooms();
-  const next = [room, ...existing.filter(item => item.id !== room.id)].slice(0, 50);
+  const next = [room, ...existing.filter(item => item.id !== room.id)].slice(0, 8);
   await SecureStore.setItemAsync(roomHistoryKey, JSON.stringify(next));
 }
 
