@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, radii, spacing } from '@wafflr/design-tokens';
 import type { DecisionCard, RoomSummary, VoteChoice } from '@wafflr/shared-types';
-import { addCard, chooseWinner, deleteCard, getRoundResult, listCards, startTieBreak, startVoting, submitBallot } from '../lib/rooms-api';
+import { addCard, chooseWinner, deleteCard, getRoundResult, listCards, startTieBreak, startVoting, submitBallot, updateCard } from '../lib/rooms-api';
 
 type Props = { room: RoomSummary & { status?: 'Created' | 'Joined' }; onBack: () => void };
 type RoundState = { phase: string; round: number; winner?: DecisionCard; tiedCards?: DecisionCard[]; scores?: { cardId: string; yepCount: number }[] };
@@ -19,6 +19,7 @@ export default function RoomScreen({ room, onBack }: Props) {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
   const [location, setLocation] = useState('');
+  const [editingCardId, setEditingCardId] = useState<string | null>(null);
   const [votes, setVotes] = useState<Record<string, VoteChoice>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -39,15 +40,21 @@ export default function RoomScreen({ room, onBack }: Props) {
 
   useEffect(() => { void refresh().catch(cause => setError(cause instanceof Error ? cause.message : 'Could not load this room.')); }, [room.id]);
 
-  const addChoice = async () => {
+  const saveChoice = async () => {
     if (!title.trim() || busy) return;
     setBusy(true); setError('');
     try {
-      const card = await addCard(room.id, { title, category, location });
-      setCards(current => [...current, card]);
-      setTitle(''); setCategory(''); setLocation('');
-      setNotice('Choice added.');
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not add that choice.'); }
+      if (editingCardId) {
+        await updateCard(room.id, editingCardId, { title, category, location });
+        setCards(current => current.map(card => card.id === editingCardId ? { ...card, title, category: category || undefined, location: location || undefined } : card));
+        setNotice('Choice updated.');
+      } else {
+        const card = await addCard(room.id, { title, category, location });
+        setCards(current => [...current, card]);
+        setNotice('Choice added.');
+      }
+      setTitle(''); setCategory(''); setLocation(''); setEditingCardId(null);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not save that choice.'); }
     finally { setBusy(false); }
   };
 
@@ -120,7 +127,8 @@ export default function RoomScreen({ room, onBack }: Props) {
             <TextInput value={category} onChangeText={setCategory} placeholder="Cuisine (optional)" placeholderTextColor={colors.muted} style={s.input} />
             <TextInput value={location} onChangeText={setLocation} placeholder="Location (optional)" placeholderTextColor={colors.muted} style={s.input} />
           </>}
-          <Action title={busy ? 'Adding…' : 'Add choice'} onPress={() => void addChoice()} disabled={!title.trim() || busy || cards.length >= 100} />
+          <Action title={busy ? 'Saving…' : editingCardId ? 'Save changes' : 'Add choice'} onPress={() => void saveChoice()} disabled={!title.trim() || busy || cards.length >= 100} />
+          {!!editingCardId && <Action title="Cancel edit" quiet onPress={() => { setEditingCardId(null); setTitle(''); setCategory(''); setLocation(''); }} />}
           <Text style={s.counter}>{cards.length} / 100 choices · {room.mode === 'guests' ? 'Guest contribution mode' : 'Host-built deck'}</Text>
         </View>
         <View style={s.panel}>
@@ -128,7 +136,7 @@ export default function RoomScreen({ room, onBack }: Props) {
           {cards.length === 0 ? <Text style={s.hint}>Your choices will appear here.</Text> : cards.map((card, index) => <View key={card.id} style={s.cardRow}>
             <View style={s.cardNumber}><Text style={s.cardNumberText}>{index + 1}</Text></View>
             <View style={{ flex: 1 }}><Text style={s.cardTitle}>{card.title}</Text>{!!(card.category || card.location) && <Text style={s.hint}>{[card.category, card.location].filter(Boolean).join(' · ')}</Text>}</View>
-            {isCreator && <Pressable onPress={() => void removeChoice(card.id)} accessibilityLabel={'Remove ' + card.title} style={s.remove}><Text style={s.removeText}>×</Text></Pressable>}
+            {isCreator && <View style={{ flexDirection: 'row', gap: 6 }}><Pressable onPress={() => { setEditingCardId(card.id); setTitle(card.title); setCategory(card.category ?? ''); setLocation(card.location ?? ''); }} accessibilityLabel={'Edit ' + card.title} style={s.remove}><Text style={s.removeText}>✎</Text></Pressable><Pressable onPress={() => void removeChoice(card.id)} accessibilityLabel={'Remove ' + card.title} style={s.remove}><Text style={s.removeText}>×</Text></Pressable></View>}
           </View>)}
           <Action title={busy ? 'Please wait…' : 'Start voting'} onPress={() => void beginVoting()} disabled={cards.length < 2 || busy} />
           {cards.length < 2 && <Text style={s.counter}>Add at least two choices to continue.</Text>}
