@@ -132,7 +132,7 @@ export default function RoomScreen({ room, onBack }: Props) {
           </>}
           <Action title={busy ? 'Saving…' : editingCardId ? 'Save changes' : 'Add choice'} onPress={() => void saveChoice()} disabled={!title.trim() || busy || cards.length >= 100} />
           {!!editingCardId && <Action title="Cancel edit" quiet onPress={() => { setEditingCardId(null); setTitle(''); setCategory(''); setLocation(''); }} />}
-          <Text style={s.counter}>{cards.length} / 100 choices · {room.mode === 'guests' ? 'Guest contribution mode' : 'Host-built deck'}</Text>
+          <Text style={s.counter}>{cards.length} / 100 choices · {room.mode === 'guests' ? `Your choices: ${cards.filter(card => card.canEdit).length} / ${room.cardsPerGuest ?? 1}` : 'Host-built deck'}</Text>
         </View>
         <View style={s.panel}>
           <Text style={s.panelTitle}>The deck so far</Text>
