@@ -19,7 +19,7 @@ function Button({ label, onPress, accent = false, compact = false }: { label: st
   return <Animated.View style={[motion, compact && { width: '100%' }]}><Pressable accessibilityRole="button" onPress={onPress} onPressIn={() => { scale.value = withSpring(.96); }} onPressOut={() => { scale.value = withSpring(1); }} style={[s.button, { backgroundColor: accent ? colors.accent : colors.butter }, compact && s.compactButton]}><Text style={[s.buttonText, accent && { color: colors.white }]}>{label}</Text></Pressable></Animated.View>;
 }
 
-function Rooms({ close, rooms }: { close: () => void; rooms: Room[] }) {
+function Rooms({ close, rooms, onOpen }: { close: () => void; rooms: Room[]; onOpen: (room: Room) => void }) {
   const [share, setShare] = useState<Room | null>(null);
   return <Animated.View entering={FadeIn.duration(150)} style={s.backdrop}>
     <Pressable accessibilityLabel="Close rooms" onPress={close} style={StyleSheet.absoluteFill} />
@@ -28,7 +28,7 @@ function Rooms({ close, rooms }: { close: () => void; rooms: Room[] }) {
       <View style={s.counts}><View style={s.count}><Text style={s.countNum}>{rooms.filter(room => room.status === 'Created').length}</Text><Text style={s.countLabel}>Created</Text></View><View style={s.count}><Text style={s.countNum}>{rooms.filter(room => room.status === 'Joined').length}</Text><Text style={s.countLabel}>Joined</Text></View></View>
       <ScrollView contentContainerStyle={{ gap: 9 }}>
         {rooms.length === 0 ? <Text style={s.formHint}>Rooms you create or join on this device will show up here.</Text> : rooms.map(room => <View key={room.id} style={s.room}>
-          <Pressable onPress={() => setShare(room)} style={s.roomMain}><View style={s.roomIcon}><Text style={s.roomInitial}>{room.title[0]}</Text></View><View style={{ flex: 1 }}><Text numberOfLines={1} style={s.roomTitle}>{room.title}</Text><Text style={s.roomMeta}>{room.status} · {room.phase}</Text></View></Pressable>
+          <Pressable onPress={() => onOpen(room)} style={s.roomMain}><View style={s.roomIcon}><Text style={s.roomInitial}>{room.title[0]}</Text></View><View style={{ flex: 1 }}><Text numberOfLines={1} style={s.roomTitle}>{room.title}</Text><Text style={s.roomMeta}>{room.status} · {room.phase}</Text></View></Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel={'Share ' + room.title} onPress={() => setShare(room)} style={s.qr}><Text style={{ fontSize: 23, color: colors.ink }}>▦</Text></Pressable>
         </View>)}
       </ScrollView>
@@ -162,7 +162,7 @@ export default function HomeScreen() {
       {backVisible ? <Animated.View entering={FadeIn.duration(160)} style={{ width: '100%', maxWidth: 340, marginTop: 8 }}><Button label="Back to Home" compact onPress={() => setScreen('home')} /></Animated.View> : <Text style={s.waiting}>Picking a winner…</Text>}
     </View>}
     <Text style={s.copyright}>© WAFFLR</Text>
-  </View>{rooms && <Rooms close={() => setRooms(false)} rooms={savedRooms} />}{setupMode && <SetupFlow mode={setupMode} close={() => setSetupMode(null)} template={template} setTemplate={setTemplate} roomTitle={roomTitle} setRoomTitle={setRoomTitle} joinCode={joinCode} setJoinCode={setJoinCode} deckMode={deckMode} setDeckMode={setDeckMode} onComplete={handleRoomSuccess} />}</SafeAreaView>;
+  </View>{rooms && <Rooms close={() => setRooms(false)} rooms={savedRooms} onOpen={room => { setActiveRoom(room); setRooms(false); setScreen('room'); }} />}{setupMode && <SetupFlow mode={setupMode} close={() => setSetupMode(null)} template={template} setTemplate={setTemplate} roomTitle={roomTitle} setRoomTitle={setRoomTitle} joinCode={joinCode} setJoinCode={setJoinCode} deckMode={deckMode} setDeckMode={setDeckMode} onComplete={handleRoomSuccess} />}</SafeAreaView>;
 }
 
 const s = StyleSheet.create({
