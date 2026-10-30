@@ -235,6 +235,7 @@ export async function joinLocalRoom(rawCode: string): Promise<{ room: RoomSummar
   if (!/^[A-Z0-9]{6}$/.test(code)) throw new Error('Enter a valid six-character room code.');
 
   const database = await getLocalDatabase();
+  const nowIso = new Date().toISOString();
   const attempt = await database.getFirstAsync<{ window_started_at: string; attempt_count: number }>(
     'SELECT window_started_at, attempt_count FROM room_join_attempts WHERE code = ?',
     code,
