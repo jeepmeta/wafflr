@@ -139,7 +139,9 @@ export default function HomeScreen() {
     return () => clearTimeout(timer);
   }, [screen]);
   const handleRoomSuccess = (room: RoomSummary) => { setRecentRoom(room); };
-  const goWinner = () => { setRooms(false); setSetupMode(null); setScreen('winner'); };\n  const beginCreate = () => { setTemplate('Where to Eat'); setRoomTitle(''); setSetupMode('create'); };\n  const beginJoin = () => { setJoinCode(''); setSetupMode('join'); };
+  const goWinner = () => { setRooms(false); setSetupMode(null); setScreen('winner'); };
+  const beginCreate = () => { setTemplate('Where to Eat'); setRoomTitle(''); setSetupMode('create'); };
+  const beginJoin = () => { setJoinCode(''); setSetupMode('join'); };
   return <SafeAreaView style={s.safe} edges={['top', 'left', 'right', 'bottom']}><View style={s.shell}>
     <View style={s.header}>
       <View style={s.brand}><View style={s.miniWaffle}><Text style={{ color: colors.syrup, fontSize: 16 }}>▦</Text></View><Text style={s.brandText}>WAFFLR</Text></View>
