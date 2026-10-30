@@ -1,4 +1,4 @@
-import type { DecisionCard, DecisionTemplate, RoomMode, RoomSummary, VoteChoice } from '@wafflr/shared-types';
+import type { DecisionCard, DecisionTemplate, RoomMode, RoomSummary, VoteChoice, RoundResult } from '@wafflr/shared-types';
 
 export interface CreateRoomInput {
   title: string;
