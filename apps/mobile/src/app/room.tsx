@@ -122,18 +122,18 @@ export default function RoomScreen({ room, onBack }: Props) {
       <Text style={s.subtitle}>{room.title}</Text>
 
       {round.phase === 'collecting' && <>
-        <View style={s.panel}>
+        {(room.mode === 'guests' || isCreator) && <View style={s.panel}>
           <Text style={s.panelTitle}>{room.mode === 'host' ? 'Add choices to your deck' : 'Add your choices'}</Text>
           <Text style={s.hint}>{room.mode === 'host' ? 'You’re building the full deck.' : 'Your group is building this deck together.'} Up to one hundred choices.</Text>
-          <TextInput value={title} onChangeText={setTitle} placeholder={room.template === 'restaurant' ? 'Restaurant name' : 'Choice name'} placeholderTextColor={#746B70} maxLength={120} style={s.input} />
+          <TextInput value={title} onChangeText={setTitle} placeholder={room.template === 'restaurant' ? 'Restaurant name' : 'Choice name'} placeholderTextColor="#746B70" maxLength={120} style={s.input} />
           {room.template === 'restaurant' && <>
-            <TextInput value={category} onChangeText={setCategory} placeholder="Cuisine (optional)" placeholderTextColor={#746B70} style={s.input} />
-            <TextInput value={location} onChangeText={setLocation} placeholder="Location (optional)" placeholderTextColor={#746B70} style={s.input} />
+            <TextInput value={category} onChangeText={setCategory} placeholder="Cuisine (optional)" placeholderTextColor="#746B70" style={s.input} />
+            <TextInput value={location} onChangeText={setLocation} placeholder="Location (optional)" placeholderTextColor="#746B70" style={s.input} />
           </>}
           <Action title={busy ? 'Saving…' : editingCardId ? 'Save changes' : 'Add choice'} onPress={() => void saveChoice()} disabled={!title.trim() || busy || cards.length >= 100} />
           {!!editingCardId && <Action title="Cancel edit" quiet onPress={() => { setEditingCardId(null); setTitle(''); setCategory(''); setLocation(''); }} />}
           <Text style={s.counter}>{cards.length} / 100 choices · {room.mode === 'guests' ? `Your choices: ${cards.filter(card => card.isMine).length} / ${room.cardsPerGuest ?? 1}` : 'Host-built deck'}</Text>
-        </View>
+        </View>}
         <View style={s.panel}>
           <Text style={s.panelTitle}>The deck so far</Text>
           {cards.length === 0 ? <Text style={s.hint}>Your choices will appear here.</Text> : cards.map((card, index) => <View key={card.id} style={s.cardRow}>
@@ -200,16 +200,16 @@ const s = StyleSheet.create({
   content: { width: '100%', maxWidth: 560, alignSelf: 'center', padding: spacing.lg, gap: 13 },
   eyebrow: { color: colors.accent, fontSize: 11, fontWeight: '900', letterSpacing: 1.5, marginTop: 8 },
   heading: { color: colors.ink, fontSize: 29, fontWeight: '900' },
-  subtitle: { color: #746B70, fontSize: 15, fontWeight: '700', marginTop: -8 },
+  subtitle: { color: '#746B70', fontSize: 15, fontWeight: '700', marginTop: -8 },
   panel: { backgroundColor: colors.cream, borderRadius: radii.lg, borderWidth: 2, borderColor: colors.ink, padding: spacing.md, gap: 10 },
   panelTitle: { color: colors.ink, fontSize: 18, fontWeight: '900' },
-  hint: { color: #746B70, fontSize: 13, lineHeight: 18 },
+  hint: { color: '#746B70', fontSize: 13, lineHeight: 18 },
   input: { backgroundColor: colors.white, borderWidth: 1.5, borderColor: colors.ink, borderRadius: radii.md, paddingHorizontal: 12, paddingVertical: 12, color: colors.ink, fontSize: 15 },
   action: { minHeight: 48, borderRadius: radii.md, backgroundColor: colors.butter, borderWidth: 2, borderColor: colors.ink, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12, paddingVertical: 10 },
   actionText: { color: colors.ink, fontWeight: '900', fontSize: 15 },
   quiet: { backgroundColor: colors.white }, quietText: { color: colors.ink },
   disabled: { opacity: .42 },
-  counter: { color: #746B70, fontSize: 12, fontWeight: '700' },
+  counter: { color: '#746B70', fontSize: 12, fontWeight: '700' },
   cardRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: '#E6DCD2' },
   cardTitle: { color: colors.ink, fontSize: 15, fontWeight: '800', flex: 1 },
   remove: { width: 29, height: 29, borderRadius: 15, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.ink },
@@ -225,5 +225,5 @@ const s = StyleSheet.create({
   winnerEmoji: { fontSize: 54 }, winnerLabel: { color: colors.ink, fontSize: 11, fontWeight: '900', letterSpacing: 2 },
   winnerTitle: { color: colors.ink, fontSize: 29, fontWeight: '900', textAlign: 'center' },
   error: { color: '#B4233B', fontWeight: '700' }, notice: { color: '#287A49', fontWeight: '700' },
-  footnote: { color: #746B70, textAlign: 'center', fontSize: 11, marginVertical: 12 },
+  footnote: { color: '#746B70', textAlign: 'center', fontSize: 11, marginVertical: 12 },
 });
