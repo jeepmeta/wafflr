@@ -122,10 +122,10 @@ export default function RoomScreen({ room, onBack }: Props) {
         <View style={s.panel}>
           <Text style={s.panelTitle}>{room.mode === 'host' ? 'Add choices to your deck' : 'Add your choices'}</Text>
           <Text style={s.hint}>{room.mode === 'host' ? 'You’re building the full deck.' : 'Your group is building this deck together.'} Up to one hundred choices.</Text>
-          <TextInput value={title} onChangeText={setTitle} placeholder={room.template === 'restaurant' ? 'Restaurant name' : 'Choice name'} placeholderTextColor={colors.muted} maxLength={120} style={s.input} />
+          <TextInput value={title} onChangeText={setTitle} placeholder={room.template === 'restaurant' ? 'Restaurant name' : 'Choice name'} placeholderTextColor={#746B70} maxLength={120} style={s.input} />
           {room.template === 'restaurant' && <>
-            <TextInput value={category} onChangeText={setCategory} placeholder="Cuisine (optional)" placeholderTextColor={colors.muted} style={s.input} />
-            <TextInput value={location} onChangeText={setLocation} placeholder="Location (optional)" placeholderTextColor={colors.muted} style={s.input} />
+            <TextInput value={category} onChangeText={setCategory} placeholder="Cuisine (optional)" placeholderTextColor={#746B70} style={s.input} />
+            <TextInput value={location} onChangeText={setLocation} placeholder="Location (optional)" placeholderTextColor={#746B70} style={s.input} />
           </>}
           <Action title={busy ? 'Saving…' : editingCardId ? 'Save changes' : 'Add choice'} onPress={() => void saveChoice()} disabled={!title.trim() || busy || cards.length >= 100} />
           {!!editingCardId && <Action title="Cancel edit" quiet onPress={() => { setEditingCardId(null); setTitle(''); setCategory(''); setLocation(''); }} />}
@@ -138,7 +138,7 @@ export default function RoomScreen({ room, onBack }: Props) {
             <View style={{ flex: 1 }}><Text style={s.cardTitle}>{card.title}</Text>{!!(card.category || card.location) && <Text style={s.hint}>{[card.category, card.location].filter(Boolean).join(' · ')}</Text>}</View>
             {(isCreator || card.canEdit) && <View style={{ flexDirection: 'row', gap: 6 }}><Pressable onPress={() => { setEditingCardId(card.id); setTitle(card.title); setCategory(card.category ?? ''); setLocation(card.location ?? ''); }} accessibilityLabel={'Edit ' + card.title} style={s.remove}><Text style={s.removeText}>✎</Text></Pressable><Pressable onPress={() => void removeChoice(card.id)} accessibilityLabel={'Remove ' + card.title} style={s.remove}><Text style={s.removeText}>×</Text></Pressable></View>}
           </View>)}
-          <Action title={busy ? 'Please wait…' : 'Start voting'} onPress={() => void beginVoting()} disabled={cards.length < 2 || busy} />
+          {isCreator ? <Action title={busy ? 'Please wait…' : 'Start voting'} onPress={() => void beginVoting()} disabled={cards.length < 2 || busy} /> : <Text style={s.counter}>Waiting for the room creator to start voting.</Text>}
           {cards.length < 2 && <Text style={s.counter}>Add at least two choices to continue.</Text>}
         </View>
       </>}
@@ -197,19 +197,17 @@ const s = StyleSheet.create({
   content: { width: '100%', maxWidth: 560, alignSelf: 'center', padding: spacing.lg, gap: 13 },
   eyebrow: { color: colors.accent, fontSize: 11, fontWeight: '900', letterSpacing: 1.5, marginTop: 8 },
   heading: { color: colors.ink, fontSize: 29, fontWeight: '900' },
-  subtitle: { color: colors.muted, fontSize: 15, fontWeight: '700', marginTop: -8 },
+  subtitle: { color: #746B70, fontSize: 15, fontWeight: '700', marginTop: -8 },
   panel: { backgroundColor: colors.cream, borderRadius: radii.lg, borderWidth: 2, borderColor: colors.ink, padding: spacing.md, gap: 10 },
   panelTitle: { color: colors.ink, fontSize: 18, fontWeight: '900' },
-  hint: { color: colors.muted, fontSize: 13, lineHeight: 18 },
+  hint: { color: #746B70, fontSize: 13, lineHeight: 18 },
   input: { backgroundColor: colors.white, borderWidth: 1.5, borderColor: colors.ink, borderRadius: radii.md, paddingHorizontal: 12, paddingVertical: 12, color: colors.ink, fontSize: 15 },
   action: { minHeight: 48, borderRadius: radii.md, backgroundColor: colors.butter, borderWidth: 2, borderColor: colors.ink, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12, paddingVertical: 10 },
   actionText: { color: colors.ink, fontWeight: '900', fontSize: 15 },
   quiet: { backgroundColor: colors.white }, quietText: { color: colors.ink },
   disabled: { opacity: .42 },
-  counter: { color: colors.muted, fontSize: 12, fontWeight: '700' },
+  counter: { color: #746B70, fontSize: 12, fontWeight: '700' },
   cardRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: '#E6DCD2' },
-  cardNumber: { width: 27, height: 27, borderRadius: 14, backgroundColor: colors.butter, alignItems: 'center', justifyContent: 'center' },
-  cardNumberText: { color: colors.ink, fontWeight: '900' },
   cardTitle: { color: colors.ink, fontSize: 15, fontWeight: '800', flex: 1 },
   remove: { width: 29, height: 29, borderRadius: 15, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.ink },
   removeText: { color: colors.ink, fontWeight: '900', fontSize: 20 },
@@ -224,5 +222,5 @@ const s = StyleSheet.create({
   winnerEmoji: { fontSize: 54 }, winnerLabel: { color: colors.ink, fontSize: 11, fontWeight: '900', letterSpacing: 2 },
   winnerTitle: { color: colors.ink, fontSize: 29, fontWeight: '900', textAlign: 'center' },
   error: { color: '#B4233B', fontWeight: '700' }, notice: { color: '#287A49', fontWeight: '700' },
-  footnote: { color: colors.muted, textAlign: 'center', fontSize: 11, marginVertical: 12 },
+  footnote: { color: #746B70, textAlign: 'center', fontSize: 11, marginVertical: 12 },
 });
