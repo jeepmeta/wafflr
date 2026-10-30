@@ -463,7 +463,8 @@ export async function submitLocalBallot(roomId: string, votes: { cardId: string;
   assertNativeLocalDatabase();
   const database = await getLocalDatabase();
   const participant = await requireLocalParticipant(database, roomId);
-  return database.withTransactionAsync(async () => {
+  let output!: LocalRoundResult;
+  await database.withTransactionAsync(async () => {
     const room = await database.getFirstAsync<{ phase: RoomPhase; current_round: number }>(
       'SELECT phase, current_round FROM rooms WHERE id = ?', roomId,
     );
@@ -503,7 +504,8 @@ export async function submitLocalBallot(roomId: string, votes: { cardId: string;
       roomId, room.current_round, roomId,
     );
     if ((participation?.submitted ?? 0) < (participation?.total ?? 0)) {
-      return { phase: 'voting', round: room.current_round };
+      output = { phase: 'voting', round: room.current_round };
+      return;
     }
 
     const scores = await database.getAllAsync<{ card_id: string; yep_count: number }>(
@@ -528,16 +530,17 @@ export async function submitLocalBallot(roomId: string, votes: { cardId: string;
       const winner = await database.getFirstAsync<LocalCardRow>(
         'SELECT id, title, category, location FROM cards WHERE id = ?', leaders[0].card_id,
       );
-      return {
+      output = {
         phase: 'completed', round: room.current_round, scores: scoreOutput,
         winner: winner ? { id: winner.id, title: winner.title, ...(winner.category ? { category: winner.category } : {}), ...(winner.location ? { location: winner.location } : {}) } : undefined,
       };
+      return;
     }
     await database.runAsync(
       'UPDATE rooms SET phase = \'round_reveal\', current_round = current_round + 1 WHERE id = ?',
       roomId,
     );
-    return {
+    output = {
       phase: 'round_reveal', round: room.current_round + 1, scores: scoreOutput,
       tiedCards: await Promise.all(leaders.map(async leader => {
         const row = await database.getFirstAsync<LocalCardRow>(
@@ -547,6 +550,7 @@ export async function submitLocalBallot(roomId: string, votes: { cardId: string;
       })).then(items => items.filter((item): item is DecisionCard => item !== null)),
     };
   });
+  return output;
 }
 
 export async function startLocalTieBreak(roomId: string): Promise<DecisionCard[]> {
@@ -554,7 +558,8 @@ export async function startLocalTieBreak(roomId: string): Promise<DecisionCard[]
   const database = await getLocalDatabase();
   const participant = await requireLocalParticipant(database, roomId);
   if (participant.role !== 'creator') throw new Error('Only the room creator can start the tie-breaker.');
-  return database.withTransactionAsync(async () => {
+  let output!: DecisionCard[];
+  await database.withTransactionAsync(async () => {
     const room = await database.getFirstAsync<{ phase: RoomPhase; current_round: number }>(
       'SELECT phase, current_round FROM rooms WHERE id = ?', roomId,
     );
@@ -585,13 +590,14 @@ export async function startLocalTieBreak(roomId: string): Promise<DecisionCard[]
       );
     }
     await database.runAsync('UPDATE rooms SET phase = \'voting\' WHERE id = ?', roomId);
-    return Promise.all(tied.map(async item => {
+    output = await Promise.all(tied.map(async item => {
       const row = await database.getFirstAsync<LocalCardRow>(
         'SELECT id, title, category, location FROM cards WHERE id = ?', item.card_id,
       );
       return row ? { id: row.id, title: row.title, ...(row.category ? { category: row.category } : {}), ...(row.location ? { location: row.location } : {}) } : null;
     })).then(items => items.filter((item): item is DecisionCard => item !== null));
   });
+  return output;
 }
 
 export async function chooseLocalWinner(roomId: string, cardId: string) {
