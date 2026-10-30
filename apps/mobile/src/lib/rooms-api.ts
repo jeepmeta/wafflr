@@ -1,5 +1,5 @@
 import type { DecisionTemplate, RoomSummary } from '@wafflr/shared-types';
-import { saveParticipantCredential } from './participant-credentials';
+import { saveParticipantCredential, saveRoomHistory } from './participant-credentials';
 
 type RoomMode = 'host' | 'guests';
 
@@ -31,6 +31,7 @@ function requireConfiguration() {
 async function callRoomRpc(
   functionName: 'wafflr_create_room' | 'wafflr_join_room',
   body: Record<string, unknown>,
+  status: 'Created' | 'Joined',
 ): Promise<RoomApiResult> {
   requireConfiguration();
 
@@ -59,6 +60,7 @@ async function callRoomRpc(
   }
 
   await saveParticipantCredential(payload.room.id, payload.participantCredential);
+  await saveRoomHistory({ ...payload.room, status });
 
   return {
     room: {
@@ -80,11 +82,11 @@ export function createRoom(input: {
     p_template: input.template,
     p_mode: input.mode,
     p_cards_per_guest: input.mode === 'guests' ? input.cardsPerGuest : null,
-  });
+  }, 'Created');
 }
 
 export function joinRoom(code: string): Promise<RoomApiResult> {
   return callRoomRpc('wafflr_join_room', {
     p_code: code.trim().toUpperCase(),
-  });
+  }, 'Joined');
 }
