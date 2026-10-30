@@ -18,3 +18,34 @@ export async function deleteParticipantCredential(roomId: string) {
   if (Platform.OS === 'web') return;
   await SecureStore.deleteItemAsync(credentialKey(roomId));
 }
+
+export type SavedRoom = import('@wafflr/shared-types').RoomSummary & {
+  status: 'Created' | 'Joined';
+};
+
+const roomHistoryKey = 'wafflr:room-history';
+
+export async function saveRoomHistory(room: SavedRoom) {
+  if (Platform.OS === 'web') return;
+  const existing = await getSavedRooms();
+  const next = [room, ...existing.filter(item => item.id !== room.id)].slice(0, 50);
+  await SecureStore.setItemAsync(roomHistoryKey, JSON.stringify(next));
+}
+
+export async function getSavedRooms(): Promise<SavedRoom[]> {
+  if (Platform.OS === 'web') return [];
+  const raw = await SecureStore.getItemAsync(roomHistoryKey);
+  if (!raw) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item): item is SavedRoom =>
+      !!item && typeof item === 'object' &&
+      typeof item.id === 'string' && typeof item.code === 'string' &&
+      typeof item.title === 'string' &&
+      (item.status === 'Created' || item.status === 'Joined')
+    );
+  } catch {
+    return [];
+  }
+}
