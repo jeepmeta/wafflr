@@ -389,7 +389,6 @@ export async function switchLocalSimulatorToCreator(roomId: string): Promise<voi
 }
 
 async function requireLocalParticipant(database: SQLite.SQLiteDatabase, roomId: string) {
-  const SecureStore = await import('expo-secure-store');
   const credential = await getStoredParticipantCredential(roomId);
   if (!credential) throw new Error('This device does not have access to this room.');
   const credentialHash = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, credential);
