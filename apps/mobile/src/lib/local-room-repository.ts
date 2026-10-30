@@ -1,5 +1,5 @@
 import type { RoomRepository } from './room-repository';
-import { addLocalCard, createLocalRoom, deleteLocalCard, joinLocalRoom, listLocalCards, listLocalRooms, startLocalVoting, updateLocalCard } from './local-database';
+import { addLocalCard, chooseLocalWinner, createLocalRoom, deleteLocalCard, getLocalRoundResult, joinLocalRoom, listLocalCards, listLocalRooms, startLocalTieBreak, startLocalVoting, submitLocalBallot, updateLocalCard } from './local-database';
 
 export const localRoomRepository: RoomRepository = {
   async createRoom(input) {
@@ -16,4 +16,8 @@ export const localRoomRepository: RoomRepository = {
   updateCard: updateLocalCard,
   deleteCard: deleteLocalCard,
   startVoting: startLocalVoting,
+  submitBallot: submitLocalBallot,
+  startTieBreak: startLocalTieBreak,
+  chooseWinner: chooseLocalWinner,
+  getRoundResult: getLocalRoundResult,
 };
