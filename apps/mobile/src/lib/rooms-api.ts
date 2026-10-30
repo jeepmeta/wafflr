@@ -1,11 +1,9 @@
 import type { DecisionTemplate, RoomSummary } from '@wafflr/shared-types';
+import { saveParticipantCredential } from './participant-credentials';
 
 type RoomMode = 'host' | 'guests';
 
-type RoomApiResult = {
-  room: RoomSummary;
-  participantCredential: string;
-};
+type RoomApiResult = { room: RoomSummary };
 
 type SupabaseRoomResponse = {
   room?: {
@@ -60,13 +58,14 @@ async function callRoomRpc(
     throw new Error('The room service returned an incomplete response.');
   }
 
+  await saveParticipantCredential(payload.room.id, payload.participantCredential);
+
   return {
     room: {
       ...payload.room,
       createdAt: payload.room.createdAt,
       expiresAt: payload.room.expiresAt,
     },
-    participantCredential: payload.participantCredential,
   };
 }
 
