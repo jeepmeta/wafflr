@@ -53,10 +53,10 @@ begin
     raise exception 'room contribution mode was not returned';
   end if;
 
-  select credential_hash into stored_hash
-  from public.room_participants
-  where room_id = room_id
-    and role = 'creator';
+  select p.credential_hash into stored_hash
+  from public.room_participants as p
+  where p.room_id = room_id
+    and p.role = 'creator';
 
   if stored_hash is null or stored_hash <> extensions.digest(raw_credential, 'sha256') then
     raise exception 'database did not store the SHA-256 credential hash';
