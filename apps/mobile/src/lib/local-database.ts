@@ -508,7 +508,7 @@ export async function submitLocalBallot(roomId: string, votes: { cardId: string;
 
     const scores = await database.getAllAsync<{ card_id: string; yep_count: number }>(
       `SELECT rc.card_id,
-        SUM(CASE WHEN bv.choice = 'yep' THEN 1 ELSE 0 END) AS yep_count
+        SUM(CASE WHEN b.id IS NOT NULL AND bv.choice = 'yep' THEN 1 ELSE 0 END) AS yep_count
        FROM round_cards rc
        LEFT JOIN ballot_votes bv ON bv.card_id = rc.card_id
        LEFT JOIN ballots b ON b.id = bv.ballot_id
@@ -578,10 +578,6 @@ export async function startLocalTieBreak(roomId: string): Promise<DecisionCard[]
       roomId, previousRound, roomId, previousRound,
     );
     if (tied.length < 2) throw new Error('There is no tie to break.');
-    await database.runAsync(
-      'INSERT INTO round_cards (room_id, round_number, card_id) VALUES (?, ?, ?)',
-      ...[] as never[],
-    ).catch(() => undefined);
     for (const card of tied) {
       await database.runAsync(
         'INSERT INTO round_cards (room_id, round_number, card_id) VALUES (?, ?, ?)',
