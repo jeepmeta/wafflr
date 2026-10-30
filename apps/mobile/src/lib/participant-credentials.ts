@@ -27,25 +27,45 @@ const roomHistoryKey = 'wafflr:room-history';
 
 export async function saveRoomHistory(room: SavedRoom) {
   if (Platform.OS === 'web') return;
-  const existing = await getSavedRooms();
-  const next = [room, ...existing.filter(item => item.id !== room.id)].slice(0, 8);
+  const existing = await getRoomHistoryIds();
+  const next = [room.id, ...existing.filter(id => id !== room.id)].slice(0, 8);
+  await SecureStore.setItemAsync(`wafflr:room:${room.id}`, JSON.stringify(room));
   await SecureStore.setItemAsync(roomHistoryKey, JSON.stringify(next));
+  const removed = existing.filter(id => !next.includes(id));
+  await Promise.all(removed.map(id => SecureStore.deleteItemAsync(`wafflr:room:${id}`)));
 }
 
-export async function getSavedRooms(): Promise<SavedRoom[]> {
-  if (Platform.OS === 'web') return [];
+async function getRoomHistoryIds(): Promise<string[]> {
   const raw = await SecureStore.getItemAsync(roomHistoryKey);
   if (!raw) return [];
   try {
     const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter((item): item is SavedRoom =>
-      !!item && typeof item === 'object' &&
-      typeof item.id === 'string' && typeof item.code === 'string' &&
-      typeof item.title === 'string' &&
-      (item.status === 'Created' || item.status === 'Joined')
-    );
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string').slice(0, 8) : [];
   } catch {
     return [];
   }
+}
+
+export async function getSavedRooms(): Promise<SavedRoom[]> {
+  if (Platform.OS === 'web') return [];
+  const ids = await getRoomHistoryIds();
+  const records = await Promise.all(ids.map(async id => {
+    const raw = await SecureStore.getItemAsync(`wafflr:room:${id}`);
+    if (!raw) return null;
+    try {
+      const item: unknown = JSON.parse(raw);
+      if (!item || typeof item !== 'object') return null;
+      const room = item as Partial<SavedRoom>;
+      if (
+        room.id !== id ||
+        typeof room.code !== 'string' ||
+        typeof room.title !== 'string' ||
+        (room.status !== 'Created' && room.status !== 'Joined')
+      ) return null;
+      return room as SavedRoom;
+    } catch {
+      return null;
+    }
+  }));
+  return records.filter((room): room is SavedRoom => room !== null);
 }
