@@ -23,7 +23,7 @@ The SQL-side join throttle depends on request-header information supplied throug
 
 The Expo mobile app calls the create-room and join-room PostgREST RPCs using the public Supabase URL and anon key. The RPC response includes a one-time raw participant credential; the client immediately saves it with Expo SecureStore and stores only non-secret room summaries in secure local history. The web target intentionally blocks live room operations because this credential flow currently requires native secure storage.
 
-The Create Room and Join Room setup screens call the live RPC client and display the returned room code after success. Your Rooms reads the locally saved room summaries. These changes are wired in the repository but have not been verified against a live Supabase project or on physical devices. The migration remains unapplied.
+The Create Room and Join Room setup screens call the live RPC client and display the returned room code after success. The client validates the RPC payload before trusting it. It saves the participant credential first; if secure storage fails, the UI reports that the server-side room may already exist and warns against blindly retrying. Saving the optional local room-history entry is best-effort, so a history write failure does not make a successful room operation look like a failure. Your Rooms reads the locally saved room summaries. These changes are wired in the repository but have not been verified against a live Supabase project or on physical devices. The migration remains unapplied.
 
 Mobile environment variables are documented in `apps/mobile/.env.example`:
 - `EXPO_PUBLIC_SUPABASE_URL`
