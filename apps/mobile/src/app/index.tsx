@@ -138,7 +138,8 @@ export default function HomeScreen() {
     const timer = setTimeout(() => setBackVisible(true), 2200);
     return () => clearTimeout(timer);
   }, [screen]);
-  const handleRoomSuccess = (room: RoomSummary) => { setRecentRoom(room); };\n  const goWinner = () => { setRooms(false); setSetupMode(null); setScreen('winner'); };\n  const beginCreate = () => { setTemplate('Where to Eat'); setRoomTitle(''); setSetupMode('create'); };\n  const beginJoin = () => { setJoinCode(''); setSetupMode('join'); };
+  const handleRoomSuccess = (room: RoomSummary) => { setRecentRoom(room); };
+  const goWinner = () => { setRooms(false); setSetupMode(null); setScreen('winner'); };\n  const beginCreate = () => { setTemplate('Where to Eat'); setRoomTitle(''); setSetupMode('create'); };\n  const beginJoin = () => { setJoinCode(''); setSetupMode('join'); };
   return <SafeAreaView style={s.safe} edges={['top', 'left', 'right', 'bottom']}><View style={s.shell}>
     <View style={s.header}>
       <View style={s.brand}><View style={s.miniWaffle}><Text style={{ color: colors.syrup, fontSize: 16 }}>▦</Text></View><Text style={s.brandText}>WAFFLR</Text></View>
@@ -150,7 +151,7 @@ export default function HomeScreen() {
         <Animated.Text entering={FadeInDown.delay(150).springify()} style={[s.wordmark, width < 390 && { fontSize: 40 }]}>WAFFLR</Animated.Text><Text style={s.tagline}>Stop waffling. Start deciding.</Text>
       </View>
       <View style={s.actions}><View style={{ flex: 1 }}><Button label="Create Room" onPress={beginCreate} /></View><View style={{ flex: 1 }}><Button label="Join Room" accent onPress={beginJoin} /></View></View>
-      {recentRoom && <Pressable onPress={() => setSetupMode('join')} style={s.recentRoom}><Text style={s.modeTitle}>{recentRoom.title}</Text><Text style={s.code}>{recentRoom.code}</Text><Text style={s.modeHint}>Room code · Tap Create or Join to continue exploring</Text></Pressable>}<Text style={s.footer}>A little help for the big “what should we do?”</Text>
+      {recentRoom && <Pressable style={s.recentRoom}><Text style={s.modeTitle}>{recentRoom.title}</Text><Text style={s.code}>{recentRoom.code}</Text><Text style={s.modeHint}>Room code · Share this with your group</Text></Pressable>}<Text style={s.footer}>A little help for the big “what should we do?”</Text>
     </Animated.View> : <View style={s.winner}>
       <Animated.View entering={FadeInDown.delay(80).springify()} style={{ alignItems: 'center', marginBottom: 16 }}><Text style={s.eyebrow}>THE GROUP HAS SPOKEN</Text><Text style={s.winnerHeading}>And the winner is…</Text></Animated.View>
       <Animated.View entering={FadeInDown.delay(200).springify()} style={s.winnerCard}><View style={s.foodArt}><View style={s.plate}><Text style={{ fontSize: 59 }}>🍕</Text></View></View><Text style={s.winnerLabel}>TONIGHT'S PICK</Text><Text style={s.winnerName}>Bob's Pizza Joint</Text><Text style={s.category}>Pizza · Italian</Text></Animated.View>
