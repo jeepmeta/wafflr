@@ -6,14 +6,10 @@ import { colors, radii, spacing } from '@wafflr/design-tokens';
 import type { DecisionTemplate, RoomSummary } from '@wafflr/shared-types';
 import { createRoom, joinRoom } from '../lib/rooms-api';
 
-type Room = { id: string; title: string; code: string; status: string; updated: string };
+type Room = RoomSummary & { status: 'Created' | 'Joined' };
 type SetupMode = 'create' | 'join' | null;
 type Template = 'Where to Eat' | 'What to Watch' | 'What to Do' | 'Custom';
-const ROOMS: Room[] = [
-  { id: '1', title: 'Friday Night Food', code: 'FRY123', status: 'Created', updated: 'Just now' },
-  { id: '2', title: 'Movie Night', code: 'MOV456', status: 'Joined', updated: 'Yesterday' },
-  { id: '3', title: 'Weekend Plans', code: 'FUN789', status: 'Created', updated: 'Yesterday' },
-];
+
 
 function Button({ label, onPress, accent = false, compact = false }: { label: string; onPress: () => void; accent?: boolean; compact?: boolean }) {
   const scale = useSharedValue(1);
@@ -21,20 +17,20 @@ function Button({ label, onPress, accent = false, compact = false }: { label: st
   return <Animated.View style={[motion, compact && { width: '100%' }]}><Pressable accessibilityRole="button" onPress={onPress} onPressIn={() => { scale.value = withSpring(.96); }} onPressOut={() => { scale.value = withSpring(1); }} style={[s.button, { backgroundColor: accent ? colors.accent : colors.butter }, compact && s.compactButton]}><Text style={[s.buttonText, accent && { color: colors.white }]}>{label}</Text></Pressable></Animated.View>;
 }
 
-function Rooms({ close }: { close: () => void }) {
+function Rooms({ close, rooms }: { close: () => void; rooms: Room[] }) {
   const [share, setShare] = useState<Room | null>(null);
   return <Animated.View entering={FadeIn.duration(150)} style={s.backdrop}>
     <Pressable accessibilityLabel="Close rooms" onPress={close} style={StyleSheet.absoluteFill} />
     <Animated.View entering={FadeInDown.springify()} style={s.modal}>
       <View style={s.modalHead}><Text style={s.modalTitle}>Your Rooms</Text><Pressable onPress={close} style={s.close}><Text style={s.closeText}>×</Text></Pressable></View>
-      <View style={s.counts}><View style={s.count}><Text style={s.countNum}>2</Text><Text style={s.countLabel}>Created</Text></View><View style={s.count}><Text style={s.countNum}>1</Text><Text style={s.countLabel}>Joined</Text></View></View>
+      <View style={s.counts}><View style={s.count}><Text style={s.countNum}>{rooms.filter(room => room.status === 'Created').length}</Text><Text style={s.countLabel}>Created</Text></View><View style={s.count}><Text style={s.countNum}>{rooms.filter(room => room.status === 'Joined').length}</Text><Text style={s.countLabel}>Joined</Text></View></View>
       <ScrollView contentContainerStyle={{ gap: 9 }}>
-        {ROOMS.map(room => <View key={room.id} style={s.room}>
-          <Pressable onPress={() => setShare(room)} style={s.roomMain}><View style={s.roomIcon}><Text style={s.roomInitial}>{room.title[0]}</Text></View><View style={{ flex: 1 }}><Text numberOfLines={1} style={s.roomTitle}>{room.title}</Text><Text style={s.roomMeta}>{room.status} · {room.updated}</Text></View></Pressable>
+        {rooms.length === 0 ? <Text style={s.formHint}>Rooms you create or join on this device will show up here.</Text> : rooms.map(room => <View key={room.id} style={s.room}>
+          <Pressable onPress={() => setShare(room)} style={s.roomMain}><View style={s.roomIcon}><Text style={s.roomInitial}>{room.title[0]}</Text></View><View style={{ flex: 1 }}><Text numberOfLines={1} style={s.roomTitle}>{room.title}</Text><Text style={s.roomMeta}>{room.status} · {room.phase}</Text></View></Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel={'Share ' + room.title} onPress={() => setShare(room)} style={s.qr}><Text style={{ fontSize: 23, color: colors.ink }}>▦</Text></Pressable>
         </View>)}
       </ScrollView>
-      {share && <View style={s.share}><Text style={s.roomTitle}>Share {share.title}</Text><Text style={s.code}>{share.code}</Text><Text style={s.roomMeta}>Demo code — QR sharing comes later</Text><Button label="Done" compact onPress={() => setShare(null)} /></View>}
+      {share && <View style={s.share}><Text style={s.roomTitle}>Share {share.title}</Text><Text style={s.code}>{share.code}</Text><Text style={s.roomMeta}>Room code · Share this with your group</Text><Button label="Done" compact onPress={() => setShare(null)} /></View>}
     </Animated.View>
   </Animated.View>;
 }
@@ -132,19 +128,20 @@ export default function HomeScreen() {
   const [deckMode, setDeckMode] = useState<'host' | 'guests'>('host');
   const [backVisible, setBackVisible] = useState(false);
   const [recentRoom, setRecentRoom] = useState<RoomSummary | null>(null);
+  const [savedRooms, setSavedRooms] = useState<Room[]>([]);
   const { width } = useWindowDimensions();
   useEffect(() => {
     if (screen !== 'winner') { setBackVisible(false); return; }
     const timer = setTimeout(() => setBackVisible(true), 2200);
     return () => clearTimeout(timer);
   }, [screen]);
-  const handleRoomSuccess = (room: RoomSummary) => { setRecentRoom(room); };
+  const handleRoomSuccess = (room: RoomSummary) => { setRecentRoom(room); setSavedRooms(current => [{ ...room, status: setupMode === 'join' ? 'Joined' : 'Created' }, ...current.filter(item => item.id !== room.id)]); };
   const beginCreate = () => { setTemplate('Where to Eat'); setRoomTitle(''); setSetupMode('create'); };
   const beginJoin = () => { setJoinCode(''); setSetupMode('join'); };
   return <SafeAreaView style={s.safe} edges={['top', 'left', 'right', 'bottom']}><View style={s.shell}>
     <View style={s.header}>
       <View style={s.brand}><View style={s.miniWaffle}><Text style={{ color: colors.syrup, fontSize: 16 }}>▦</Text></View><Text style={s.brandText}>WAFFLR</Text></View>
-      <Pressable accessibilityRole="button" onPress={() => setRooms(true)} style={s.roomsButton}><Text style={s.roomsLabel}>Your Rooms</Text><View style={s.badge}><Text style={s.badgeText}>{ROOMS.length}</Text></View></Pressable>
+      <Pressable accessibilityRole="button" onPress={() => setRooms(true)} style={s.roomsButton}><Text style={s.roomsLabel}>Your Rooms</Text><View style={s.badge}><Text style={s.badgeText}>{savedRooms.length}</Text></View></Pressable>
     </View>
     {screen === 'home' ? <Animated.View entering={FadeIn.duration(220)} style={s.home}>
       <View style={s.hero}>
@@ -160,7 +157,7 @@ export default function HomeScreen() {
       {backVisible ? <Animated.View entering={FadeIn.duration(160)} style={{ width: '100%', maxWidth: 340, marginTop: 8 }}><Button label="Back to Home" compact onPress={() => setScreen('home')} /></Animated.View> : <Text style={s.waiting}>Picking a winner…</Text>}
     </View>}
     <Text style={s.copyright}>© WAFFLR</Text>
-  </View>{rooms && <Rooms close={() => setRooms(false)} />}{setupMode && <SetupFlow mode={setupMode} close={() => setSetupMode(null)} template={template} setTemplate={setTemplate} roomTitle={roomTitle} setRoomTitle={setRoomTitle} joinCode={joinCode} setJoinCode={setJoinCode} deckMode={deckMode} setDeckMode={setDeckMode} onComplete={handleRoomSuccess} />}</SafeAreaView>;
+  </View>{rooms && <Rooms close={() => setRooms(false)} rooms={savedRooms} />}{setupMode && <SetupFlow mode={setupMode} close={() => setSetupMode(null)} template={template} setTemplate={setTemplate} roomTitle={roomTitle} setRoomTitle={setRoomTitle} joinCode={joinCode} setJoinCode={setJoinCode} deckMode={deckMode} setDeckMode={setDeckMode} onComplete={handleRoomSuccess} />}</SafeAreaView>;
 }
 
 const s = StyleSheet.create({
