@@ -627,6 +627,22 @@ export async function getRoundResult(roomId: string): Promise<RoundResult | null
     );
     if (row) return { phase: 'completed', round: room.current_round, winner: { id: row.id, title: row.title, ...(row.category ? { category: row.category } : {}), ...(row.location ? { location: row.location } : {}) } };
   }
+  if (room.phase === 'voting' && room.current_round > 1) {
+    const tiedRows = await database.getAllAsync<{ card_id: string }>(
+      'SELECT card_id FROM round_cards WHERE room_id = ? AND round_number = ? ORDER BY card_id',
+      roomId, room.current_round,
+    );
+    const tiedCards = await Promise.all(tiedRows.map(async item => {
+      const row = await database.getFirstAsync<LocalCardRow>(
+        'SELECT id, title, category, location FROM cards WHERE id = ?', item.card_id,
+      );
+      return row ? { id: row.id, title: row.title, ...(row.category ? { category: row.category } : {}), ...(row.location ? { location: row.location } : {}) } : null;
+    }));
+    return {
+      phase: 'voting', round: room.current_round,
+      tiedCards: tiedCards.filter((item): item is DecisionCard => item !== null),
+    };
+  }
   if (room.phase === 'round_reveal') {
     const previousRound = room.current_round - 1;
     const scores = await database.getAllAsync<{ card_id: string; yep_count: number }>(
