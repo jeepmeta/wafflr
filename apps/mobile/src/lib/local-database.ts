@@ -445,6 +445,196 @@ export async function startLocalVoting(roomId: string) {
       'SELECT COUNT(*) AS total FROM cards WHERE room_id = ?', roomId,
     );
     if ((count?.total ?? 0) < 2) throw new Error('Add at least two choices before voting.');
-    await database.runAsync('UPDATE rooms SET phase = \'voting\' WHERE id = ?', roomId);
+    await database.runAsync('INSERT INTO round_cards (room_id, round_number, card_id) SELECT ?, 1, id FROM cards WHERE room_id = ?', roomId, roomId);
+    await database.runAsync('UPDATE rooms SET phase = \'voting\', current_round = 1 WHERE id = ?', roomId);
   });
+}
+
+
+export type LocalRoundResult = {
+  phase: RoomPhase;
+  round: number;
+  winner?: DecisionCard;
+  tiedCards?: DecisionCard[];
+  scores?: { cardId: string; yepCount: number }[];
+};
+
+export async function submitLocalBallot(roomId: string, votes: { cardId: string; choice: 'yep' | 'nah' }[]): Promise<LocalRoundResult> {
+  assertNativeLocalDatabase();
+  const database = await getLocalDatabase();
+  const participant = await requireLocalParticipant(database, roomId);
+  return database.withTransactionAsync(async () => {
+    const room = await database.getFirstAsync<{ phase: RoomPhase; current_round: number }>(
+      'SELECT phase, current_round FROM rooms WHERE id = ?', roomId,
+    );
+    if (room?.phase !== 'voting') throw new Error('This room is not accepting votes.');
+    const cards = await database.getAllAsync<{ card_id: string }>(
+      'SELECT card_id FROM round_cards WHERE room_id = ? AND round_number = ? ORDER BY card_id',
+      roomId, room.current_round,
+    );
+    if (cards.length < 2) throw new Error('There are not enough choices in this round.');
+    if (votes.length !== cards.length || new Set(votes.map(vote => vote.cardId)).size !== cards.length) {
+      throw new Error('Vote Yep or Nah on every card before submitting.');
+    }
+    const allowed = new Set(cards.map(card => card.card_id));
+    if (votes.some(vote => !allowed.has(vote.cardId) || !['yep', 'nah'].includes(vote.choice))) {
+      throw new Error('Your ballot contains an invalid choice.');
+    }
+    const existing = await database.getFirstAsync<{ id: string }>(
+      'SELECT id FROM ballots WHERE room_id = ? AND participant_id = ? AND round_number = ?',
+      roomId, participant.id, room.current_round,
+    );
+    if (existing) throw new Error('Your ballot has already been submitted.');
+    const ballotId = Crypto.randomUUID();
+    await database.runAsync(
+      'INSERT INTO ballots (id, room_id, participant_id, round_number, submitted_at) VALUES (?, ?, ?, ?, ?)',
+      ballotId, roomId, participant.id, room.current_round, new Date().toISOString(),
+    );
+    for (const vote of votes) {
+      await database.runAsync(
+        'INSERT INTO ballot_votes (ballot_id, card_id, choice) VALUES (?, ?, ?)',
+        ballotId, vote.cardId, vote.choice,
+      );
+    }
+    const participation = await database.getFirstAsync<{ total: number; submitted: number }>(
+      `SELECT COUNT(*) AS total,
+        (SELECT COUNT(*) FROM ballots WHERE room_id = ? AND round_number = ?) AS submitted
+       FROM participants WHERE room_id = ?`,
+      roomId, room.current_round, roomId,
+    );
+    if ((participation?.submitted ?? 0) < (participation?.total ?? 0)) {
+      return { phase: 'voting', round: room.current_round };
+    }
+
+    const scores = await database.getAllAsync<{ card_id: string; yep_count: number }>(
+      `SELECT rc.card_id,
+        SUM(CASE WHEN bv.choice = 'yep' THEN 1 ELSE 0 END) AS yep_count
+       FROM round_cards rc
+       LEFT JOIN ballot_votes bv ON bv.card_id = rc.card_id
+       LEFT JOIN ballots b ON b.id = bv.ballot_id
+         AND b.room_id = rc.room_id AND b.round_number = rc.round_number
+       WHERE rc.room_id = ? AND rc.round_number = ?
+       GROUP BY rc.card_id ORDER BY yep_count DESC`,
+      roomId, room.current_round,
+    );
+    const highest = Math.max(...scores.map(score => score.yep_count));
+    const leaders = scores.filter(score => score.yep_count === highest);
+    const scoreOutput = scores.map(score => ({ cardId: score.card_id, yepCount: score.yep_count }));
+    if (leaders.length === 1) {
+      await database.runAsync(
+        'UPDATE rooms SET phase = \'completed\', winner_card_id = ? WHERE id = ?',
+        leaders[0].card_id, roomId,
+      );
+      const winner = await database.getFirstAsync<LocalCardRow>(
+        'SELECT id, title, category, location FROM cards WHERE id = ?', leaders[0].card_id,
+      );
+      return {
+        phase: 'completed', round: room.current_round, scores: scoreOutput,
+        winner: winner ? { id: winner.id, title: winner.title, ...(winner.category ? { category: winner.category } : {}), ...(winner.location ? { location: winner.location } : {}) } : undefined,
+      };
+    }
+    await database.runAsync(
+      'UPDATE rooms SET phase = \'round_reveal\', current_round = current_round + 1 WHERE id = ?',
+      roomId,
+    );
+    return {
+      phase: 'round_reveal', round: room.current_round + 1, scores: scoreOutput,
+      tiedCards: await Promise.all(leaders.map(async leader => {
+        const row = await database.getFirstAsync<LocalCardRow>(
+          'SELECT id, title, category, location FROM cards WHERE id = ?', leader.card_id,
+        );
+        return row ? { id: row.id, title: row.title, ...(row.category ? { category: row.category } : {}), ...(row.location ? { location: row.location } : {}) } : null;
+      })).then(items => items.filter((item): item is DecisionCard => item !== null)),
+    };
+  });
+}
+
+export async function startLocalTieBreak(roomId: string): Promise<DecisionCard[]> {
+  assertNativeLocalDatabase();
+  const database = await getLocalDatabase();
+  const participant = await requireLocalParticipant(database, roomId);
+  if (participant.role !== 'creator') throw new Error('Only the room creator can start the tie-breaker.');
+  return database.withTransactionAsync(async () => {
+    const room = await database.getFirstAsync<{ phase: RoomPhase; current_round: number }>(
+      'SELECT phase, current_round FROM rooms WHERE id = ?', roomId,
+    );
+    if (room?.phase !== 'round_reveal') throw new Error('This room is not ready for a tie-breaker.');
+    const previousRound = room.current_round - 1;
+    const tied = await database.getAllAsync<{ card_id: string }>(
+      `SELECT rc.card_id FROM round_cards rc
+       JOIN ballot_votes bv ON bv.card_id = rc.card_id
+       JOIN ballots b ON b.id = bv.ballot_id AND b.room_id = rc.room_id AND b.round_number = rc.round_number
+       WHERE rc.room_id = ? AND rc.round_number = ? AND bv.choice = 'yep'
+       GROUP BY rc.card_id
+       HAVING COUNT(*) = (
+         SELECT MAX(score) FROM (
+           SELECT COUNT(*) AS score FROM round_cards x
+           JOIN ballot_votes v ON v.card_id = x.card_id
+           JOIN ballots z ON z.id = v.ballot_id AND z.room_id = x.room_id AND z.round_number = x.round_number
+           WHERE x.room_id = ? AND x.round_number = ? AND v.choice = 'yep'
+           GROUP BY x.card_id
+         )
+       )`,
+      roomId, previousRound, roomId, previousRound,
+    );
+    if (tied.length < 2) throw new Error('There is no tie to break.');
+    await database.runAsync(
+      'INSERT INTO round_cards (room_id, round_number, card_id) VALUES (?, ?, ?)',
+      ...[] as never[],
+    ).catch(() => undefined);
+    for (const card of tied) {
+      await database.runAsync(
+        'INSERT INTO round_cards (room_id, round_number, card_id) VALUES (?, ?, ?)',
+        roomId, room.current_round, card.card_id,
+      );
+    }
+    await database.runAsync('UPDATE rooms SET phase = \'voting\' WHERE id = ?', roomId);
+    return Promise.all(tied.map(async item => {
+      const row = await database.getFirstAsync<LocalCardRow>(
+        'SELECT id, title, category, location FROM cards WHERE id = ?', item.card_id,
+      );
+      return row ? { id: row.id, title: row.title, ...(row.category ? { category: row.category } : {}), ...(row.location ? { location: row.location } : {}) } : null;
+    })).then(items => items.filter((item): item is DecisionCard => item !== null));
+  });
+}
+
+export async function chooseLocalWinner(roomId: string, cardId: string) {
+  assertNativeLocalDatabase();
+  const database = await getLocalDatabase();
+  const participant = await requireLocalParticipant(database, roomId);
+  if (participant.role !== 'creator') throw new Error('Only the room creator can choose the winner.');
+  await database.withTransactionAsync(async () => {
+    const room = await database.getFirstAsync<{ phase: RoomPhase; current_round: number }>(
+      'SELECT phase, current_round FROM rooms WHERE id = ?', roomId,
+    );
+    if (room?.phase !== 'round_reveal' || room.current_round < 3) {
+      throw new Error('The creator can choose a winner only after a repeated tie.');
+    }
+    const valid = await database.getFirstAsync<{ card_id: string }>(
+      'SELECT card_id FROM round_cards WHERE room_id = ? AND round_number = ? AND card_id = ?',
+      roomId, room.current_round - 1, cardId,
+    );
+    if (!valid) throw new Error('Choose one of the tied cards.');
+    await database.runAsync(
+      'UPDATE rooms SET phase = \'completed\', winner_card_id = ? WHERE id = ?',
+      cardId, roomId,
+    );
+  });
+}
+
+export async function getLocalRoundResult(roomId: string): Promise<LocalRoundResult | null> {
+  assertNativeLocalDatabase();
+  const database = await getLocalDatabase();
+  await requireLocalParticipant(database, roomId);
+  const room = await database.getFirstAsync<{ phase: RoomPhase; current_round: number; winner_card_id: string | null }>(
+    'SELECT phase, current_round, winner_card_id FROM rooms WHERE id = ?', roomId,
+  );
+  if (!room) return null;
+  if (room.phase === 'completed' && room.winner_card_id) {
+    const row = await database.getFirstAsync<LocalCardRow>(
+      'SELECT id, title, category, location FROM cards WHERE id = ?', room.winner_card_id,
+    );
+    if (row) return { phase: 'completed', round: room.current_round, winner: { id: row.id, title: row.title, ...(row.category ? { category: row.category } : {}), ...(row.location ? { location: row.location } : {}) } };
+  }
+  return { phase: room.phase, round: room.current_round };
 }
