@@ -43,3 +43,19 @@ export function deleteCard(roomId: string, cardId: string) {
 export function startVoting(roomId: string) {
   return activeRepository.startVoting(roomId);
 }
+
+export function submitBallot(roomId: string, votes: { cardId: string; choice: 'yep' | 'nah' }[]) {
+  return activeRepository.submitBallot(roomId, votes);
+}
+
+export function startTieBreak(roomId: string) {
+  return activeRepository.startTieBreak(roomId);
+}
+
+export function chooseWinner(roomId: string, cardId: string) {
+  return activeRepository.chooseWinner(roomId, cardId);
+}
+
+export function getRoundResult(roomId: string) {
+  return activeRepository.getRoundResult(roomId);
+}
