@@ -21,18 +21,26 @@ The SQL-side join throttle depends on request-header information supplied throug
 
 ## Current mobile integration
 
-The Expo app now calls the create-room and join-room PostgREST RPCs. It stores returned participant credentials with Expo SecureStore. The mobile client uses only the public Supabase URL and anon key. The UI shows the returned room code after success. This is not yet verified against a live Supabase project; the migration remains unapplied, and Your Rooms still uses prototype data. Dependency installation, type checking, Expo Doctor, and native-device tests remain outstanding.
+The Expo mobile app calls the create-room and join-room PostgREST RPCs using the public Supabase URL and anon key. The RPC response includes a one-time raw participant credential; the client immediately saves it with Expo SecureStore and stores only non-secret room summaries in secure local history. The web target intentionally blocks live room operations because this credential flow currently requires native secure storage.
+
+The Create Room and Join Room setup screens call the live RPC client and display the returned room code after success. Your Rooms reads the locally saved room summaries. These changes are wired in the repository but have not been verified against a live Supabase project or on physical devices. The migration remains unapplied.
+
+Mobile environment variables are documented in `apps/mobile/.env.example`:
+- `EXPO_PUBLIC_SUPABASE_URL`
+- `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+
+Only the public anon key belongs in the mobile app. Never add a service-role key to an Expo environment variable or client bundle.
 
 ## Next implementation milestone
 
 Make real room creation and joining work from two separate devices:
 
-1. Review and test the migration in a disposable local Supabase environment.
-2. Verify request-header behavior and rate limiting; move public entrypoints behind an Edge Function if trustworthy client identity is not available to the database.
-3. Add the Expo SecureStore and Supabase client dependencies with a regenerated lockfile.
-4. Add typed backend calls and secure credential persistence.
-5. Connect the existing Create Room and Join Room screens to the backend.
-6. Verify creator and guest devices can create/join the same collecting room and that credentials survive app restarts.
+1. Install dependencies from the committed lockfile and run the mobile type check.
+2. Review and test the migration in a disposable local Supabase environment.
+3. Verify request-header behavior and rate limiting; move public entrypoints behind an Edge Function if trustworthy client identity is not available to the database.
+4. Configure a non-production Supabase project and its mobile environment variables.
+5. Verify creator and guest devices can create/join the same collecting room and that credentials survive app restarts.
+6. Add a safe room lookup/re-entry flow that uses the saved participant credential rather than treating the room code as authorization.
 
 Do not apply migrations to the owner's remote project as part of repository scaffolding. Confirm the target project and reconcile its migration history before any remote database change.
 
