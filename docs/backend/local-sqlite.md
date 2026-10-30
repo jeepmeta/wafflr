@@ -14,7 +14,9 @@ The current schema version contains:
 - `participants`: creator/guest records and SHA-256 hashes of participant credentials;
 - `cards`: contributed decision cards;
 - `ballots`: submitted participant ballots and round number;
-- `ballot_votes`: Yep/Nah choices for cards in a ballot;\n- `room_join_attempts`: local per-room-code attempt windows for exercising the join-throttle behavior.
+- `ballot_votes`: Yep/Nah choices for cards in a ballot;
+- `round_cards`: cards included in each voting round;
+- `room_join_attempts`: local per-room-code attempt windows for exercising the join-throttle behavior.
 
 Room codes are six characters and case-insensitive. They identify a room but do not authorize access. Each participant receives a separate random 256-bit credential. The raw credential is stored in Expo SecureStore; SQLite stores only its SHA-256 hash.
 
