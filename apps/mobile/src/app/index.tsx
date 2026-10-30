@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, radii, spacing } from '@wafflr/design-tokens';
 import type { DecisionTemplate, RoomSummary } from '@wafflr/shared-types';
 import { createRoom, joinRoom } from '../lib/rooms-api';
-import { getSavedRooms, type SavedRoom } from '../lib/participant-credentials';
+import { getSavedRooms, saveParticipantCredential, saveRoomHistory, type SavedRoom } from '../lib/participant-credentials';
 
 type Room = SavedRoom;
 type SetupMode = 'create' | 'join' | null;
@@ -59,6 +59,8 @@ function SetupFlow({
       setBusy(true);
       try {
         const result = await joinRoom(joinCode);
+        await saveParticipantCredential(result.room.id, result.participantCredential);
+        await saveRoomHistory({ ...result.room, status: 'Joined' });
         setCreatedRoom(result.room);
         onComplete(result.room);
       } catch (cause) {
@@ -79,6 +81,8 @@ function SetupFlow({
         mode: deckMode,
         cardsPerGuest: deckMode === 'guests' ? cardsPerGuest : undefined,
       });
+      await saveParticipantCredential(result.room.id, result.participantCredential);
+      await saveRoomHistory({ ...result.room, status: 'Created' });
       setCreatedRoom(result.room);
       onComplete(result.room);
     } catch (cause) {
@@ -137,7 +141,7 @@ export default function HomeScreen() {
     const timer = setTimeout(() => setBackVisible(true), 2200);
     return () => clearTimeout(timer);
   }, [screen]);
-  const handleRoomSuccess = (room: RoomSummary) => { setRecentRoom(room); setSavedRooms(current => [{ ...room, status: setupMode === 'join' ? 'Joined' : 'Created' }, ...current.filter(item => item.id !== room.id)]); };
+  const handleRoomSuccess = (room: RoomSummary) => { const saved = { ...room, status: setupMode === 'join' ? 'Joined' as const : 'Created' as const }; setRecentRoom(room); setSavedRooms(current => [saved, ...current.filter(item => item.id !== room.id)].slice(0, 8)); };
   const beginCreate = () => { setTemplate('Where to Eat'); setRoomTitle(''); setSetupMode('create'); };
   const beginJoin = () => { setJoinCode(''); setSetupMode('join'); };
   return <SafeAreaView style={s.safe} edges={['top', 'left', 'right', 'bottom']}><View style={s.shell}>
