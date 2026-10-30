@@ -1,8 +1,6 @@
-import type { DecisionTemplate, RoomSummary } from '@wafflr/shared-types';
+import type { DecisionTemplate, RoomMode, RoomSummary } from '@wafflr/shared-types';
 import { Platform } from 'react-native';
 import { saveParticipantCredential, saveRoomHistory } from './participant-credentials';
-
-import type { RoomMode } from '@wafflr/shared-types';
 
 type RoomApiResult = { room: RoomSummary };
 
@@ -59,19 +57,47 @@ async function callRoomRpc(
     throw new Error(payload || `Room request failed (${response.status}).`);
   }
 
-  const payload = (await response.json()) as SupabaseRoomResponse;
-  if (!payload.room || !payload.participantCredential) {
-    throw new Error('The room service returned an incomplete response.');
+  let payload: SupabaseRoomResponse;
+  try {
+    payload = (await response.json()) as SupabaseRoomResponse;
+  } catch {
+    throw new Error('The room service returned an unreadable response.');
   }
 
-  await saveParticipantCredential(payload.room.id, payload.participantCredential);
-  await saveRoomHistory({ ...payload.room, status });
+  const room = payload.room;
+  if (
+    !room ||
+    typeof room.id !== 'string' ||
+    typeof room.code !== 'string' || !/^[A-Z0-9]{6}$/.test(room.code) ||
+    typeof room.title !== 'string' ||
+    !['restaurant', 'movie', 'activity', 'custom'].includes(room.template) ||
+    !['host', 'guests'].includes(room.mode) ||
+    !['collecting', 'voting', 'round_reveal', 'completed', 'cancelled', 'expired'].includes(room.phase) ||
+    !Number.isInteger(room.guestCount) || room.guestCount < 1 ||
+    typeof room.createdAt !== 'string' ||
+    typeof payload.participantCredential !== 'string' || !/^[a-f0-9]{64}$/i.test(payload.participantCredential)
+  ) {
+    throw new Error('The room service returned invalid room data.');
+  }
+
+  try {
+    await saveParticipantCredential(room.id, payload.participantCredential);
+  } catch {
+    throw new Error('The room was created, but this device could not securely save its access credential. Do not close this screen; retrying may create another room.');
+  }
+
+  // Room history is a convenience. A local history write must not turn a
+  // successful server operation into an apparent failure after its one-time
+  // credential has already been saved.
+  try {
+    await saveRoomHistory({ ...room, status });
+  } catch {
+    // The credential remains safe; the room can still be used in this session.
+  }
 
   return {
     room: {
-      ...payload.room,
-      createdAt: payload.room.createdAt,
-      expiresAt: payload.room.expiresAt,
+      ...room,
     },
   };
 }
