@@ -1,5 +1,5 @@
 import type { DecisionTemplate, RoomSummary } from '@wafflr/shared-types';
-import { getParticipantCredential, saveParticipantCredential } from './participant-credentials';
+import { saveParticipantCredential } from './participant-credentials';
 
 type RoomMode = 'host' | 'guests';
 
