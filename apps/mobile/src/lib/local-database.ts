@@ -331,9 +331,66 @@ type LocalCardRow = {
   participant_id?: string;
 };
 
+const simulatorActiveKey = (roomId: string) => `wafflr:simulator-active:${roomId}`;
+const simulatorCredentialKey = (roomId: string, participantId: string) => `wafflr:simulator-participant:${roomId}:${participantId}`;
+
+async function getStoredParticipantCredential(roomId: string) {
+  const SecureStore = await import('expo-secure-store');
+  const activeSimulatorId = await SecureStore.getItemAsync(simulatorActiveKey(roomId));
+  if (activeSimulatorId) {
+    const simulated = await SecureStore.getItemAsync(simulatorCredentialKey(roomId, activeSimulatorId));
+    if (simulated) return simulated;
+  }
+  return SecureStore.getItemAsync(`wafflr:participant:${roomId}`);
+}
+
+export async function getActiveLocalParticipantRole(roomId: string): Promise<'creator' | 'guest'> {
+  assertNativeLocalDatabase();
+  const database = await getLocalDatabase();
+  return (await requireLocalParticipant(database, roomId)).role;
+}
+
+/** Development-only identity switching. No names or profiles are created. */
+export async function createLocalSimulatorGuest(roomId: string): Promise<void> {
+  if (!__DEV__) throw new Error('The participant simulator is only available in development builds.');
+  assertNativeLocalDatabase();
+  const database = await getLocalDatabase();
+  const credential = randomHex(32);
+  const credentialHash = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, credential);
+  const participantId = Crypto.randomUUID();
+  const joinedAt = new Date().toISOString();
+  await database.withTransactionAsync(async () => {
+    const room = await database.getFirstAsync<{ phase: RoomPhase; expires_at: string }>(
+      'SELECT phase, expires_at FROM rooms WHERE id = ?', roomId,
+    );
+    if (!room || room.phase === 'completed' || room.phase === 'cancelled' || room.phase === 'expired' ||
+      new Date(room.expires_at).getTime() <= Date.now()) {
+      throw new Error('This room is no longer available for simulator participants.');
+    }
+    await database.runAsync(
+      'INSERT INTO participants (id, room_id, credential_hash, role, joined_at) VALUES (?, ?, ?, \'guest\', ?)',
+      participantId, roomId, credentialHash, joinedAt,
+    );
+  });
+  const SecureStore = await import('expo-secure-store');
+  try {
+    await SecureStore.setItemAsync(simulatorCredentialKey(roomId, participantId), credential);
+    await SecureStore.setItemAsync(simulatorActiveKey(roomId), participantId);
+  } catch {
+    await database.runAsync('DELETE FROM participants WHERE id = ?', participantId);
+    throw new Error('Could not securely store the simulator participant.');
+  }
+}
+
+export async function switchLocalSimulatorToCreator(roomId: string): Promise<void> {
+  if (!__DEV__) throw new Error('The participant simulator is only available in development builds.');
+  const SecureStore = await import('expo-secure-store');
+  await SecureStore.deleteItemAsync(simulatorActiveKey(roomId));
+}
+
 async function requireLocalParticipant(database: SQLite.SQLiteDatabase, roomId: string) {
   const SecureStore = await import('expo-secure-store');
-  const credential = await SecureStore.getItemAsync(`wafflr:participant:${roomId}`);
+  const credential = await getStoredParticipantCredential(roomId);
   if (!credential) throw new Error('This device does not have access to this room.');
   const credentialHash = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, credential);
   const participant = await database.getFirstAsync<{ id: string; role: 'creator' | 'guest' }>(
