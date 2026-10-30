@@ -51,3 +51,11 @@ export interface ApprovalScore {
   cardId: string;
   yepCount: number;
 }
+
+export interface RoundResult {
+  phase: RoomPhase;
+  round: number;
+  winner?: DecisionCard;
+  tiedCards?: DecisionCard[];
+  scores?: ApprovalScore[];
+}
