@@ -1,4 +1,5 @@
 import type { DecisionTemplate, RoomSummary } from '@wafflr/shared-types';
+import { Platform } from 'react-native';
 import { saveParticipantCredential, saveRoomHistory } from './participant-credentials';
 
 type RoomMode = 'host' | 'guests';
@@ -34,6 +35,9 @@ async function callRoomRpc(
   status: 'Created' | 'Joined',
 ): Promise<RoomApiResult> {
   requireConfiguration();
+  if (Platform.OS === 'web') {
+    throw new Error('Live room creation and joining are currently available in the iOS and Android apps.');
+  }
 
   const response = await fetch(`${supabaseUrl}/rest/v1/rpc/${functionName}`, {
     method: 'POST',
