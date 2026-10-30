@@ -1,7 +1,7 @@
 import * as Crypto from 'expo-crypto';
 import * as SQLite from 'expo-sqlite';
 import { Platform } from 'react-native';
-import type { DecisionCard, DecisionTemplate, RoomMode, RoomPhase, RoomSummary } from '@wafflr/shared-types';
+import type { DecisionCard, DecisionTemplate, RoomMode, RoomPhase, RoomSummary, RoundResult } from '@wafflr/shared-types';
 
 const DATABASE_NAME = 'wafflr-local.db';
 const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -453,19 +453,11 @@ export async function startLocalVoting(roomId: string) {
 }
 
 
-export type LocalRoundResult = {
-  phase: RoomPhase;
-  round: number;
-  winner?: DecisionCard;
-  tiedCards?: DecisionCard[];
-  scores?: { cardId: string; yepCount: number }[];
-};
-
-export async function submitLocalBallot(roomId: string, votes: { cardId: string; choice: 'yep' | 'nah' }[]): Promise<LocalRoundResult> {
+export async function submitLocalBallot(roomId: string, votes: { cardId: string; choice: 'yep' | 'nah' }[]): Promise<RoundResult> {
   assertNativeLocalDatabase();
   const database = await getLocalDatabase();
   const participant = await requireLocalParticipant(database, roomId);
-  let output!: LocalRoundResult;
+  let output!: RoundResult;
   await database.withTransactionAsync(async () => {
     const room = await database.getFirstAsync<{ phase: RoomPhase; current_round: number }>(
       'SELECT phase, current_round FROM rooms WHERE id = ?', roomId,
@@ -621,7 +613,7 @@ export async function chooseLocalWinner(roomId: string, cardId: string) {
   });
 }
 
-export async function getLocalRoundResult(roomId: string): Promise<LocalRoundResult | null> {
+export async function getRoundResult(roomId: string): Promise<RoundResult | null> {
   assertNativeLocalDatabase();
   const database = await getLocalDatabase();
   await requireLocalParticipant(database, roomId);
