@@ -37,16 +37,18 @@ A rollback-only SQL smoke test is available at `supabase/tests/room_bootstrap.sq
 
 ## Next implementation milestone
 
-Make real room creation and joining work from two separate devices:
+Finish and exercise the local-first game flow before adding a remote backend:
 
-1. Install dependencies from the committed lockfile and run the mobile type check.
-2. Review and test the migration in a disposable local Supabase environment.
-3. Verify request-header behavior and rate limiting; move public entrypoints behind an Edge Function if trustworthy client identity is not available to the database.
-4. Configure a non-production Supabase project and its mobile environment variables.
-5. Verify creator and guest devices can create/join the same collecting room and that credentials survive app restarts.
-6. Add a safe room lookup/re-entry flow that uses the saved participant credential rather than treating the room code as authorization.
+1. Regenerate the pnpm lockfile after installing the Expo SDK 58-compatible SQLite and Crypto packages.
+2. Run the Expo TypeScript check and fix any dependency or platform issues.
+3. Build the card-entry and host-review screens on top of the repository contract.
+4. Add ballot submission, vote completion, scoring, winner reveal, and tie-breaker operations.
+5. Add local persistence/re-entry tests and verify that credentials survive app restarts.
+6. Add a development participant simulator if we need to test multiple people on one local database.
 
-Do not apply migrations to the owner's remote project as part of repository scaffolding. Confirm the target project and reconcile its migration history before any remote database change.
+Only after the domain operations and game flow are stable should we add a Supabase adapter. At that point, test PostgreSQL migrations and authorization in a disposable local Supabase stack, then configure a non-production hosted project for two-device testing.
+
+No remote Supabase project has been configured or changed as part of the local-first work.
 
 ## Later backend operations
 
