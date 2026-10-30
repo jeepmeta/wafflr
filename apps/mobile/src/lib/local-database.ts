@@ -6,7 +6,7 @@ import type { DecisionCard, DecisionTemplate, RoomMode, RoomPhase, RoomSummary }
 const DATABASE_NAME = 'wafflr-local.db';
 const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const ROOM_LIFETIME_MS = 24 * 60 * 60 * 1000;
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 type LocalRoomRow = {
   id: string;
@@ -70,6 +70,8 @@ async function migrate(database: SQLite.SQLiteDatabase) {
           CHECK(phase IN ('collecting', 'voting', 'round_reveal', 'completed', 'cancelled', 'expired')),
         created_at TEXT NOT NULL,
         expires_at TEXT NOT NULL,
+        current_round INTEGER NOT NULL DEFAULT 1 CHECK(current_round >= 1),
+        winner_card_id TEXT,
         CHECK(
           (mode = 'guests' AND cards_per_guest BETWEEN 1 AND 3)
           OR (mode = 'host' AND cards_per_guest IS NULL)
@@ -127,6 +129,19 @@ async function migrate(database: SQLite.SQLiteDatabase) {
         CREATE INDEX IF NOT EXISTS room_join_attempts_window_idx
           ON room_join_attempts(window_started_at);
         PRAGMA user_version = 2;
+      `);
+    }
+    if (currentVersion < 3) {
+      await database.execAsync(`
+        ALTER TABLE rooms ADD COLUMN current_round INTEGER NOT NULL DEFAULT 1;
+        ALTER TABLE rooms ADD COLUMN winner_card_id TEXT;
+        CREATE TABLE IF NOT EXISTS round_cards (
+          room_id TEXT NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+          round_number INTEGER NOT NULL,
+          card_id TEXT NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
+          PRIMARY KEY(room_id, round_number, card_id)
+        );
+        PRAGMA user_version = 3;
       `);
     }
   });
