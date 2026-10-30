@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, radii, spacing } from '@wafflr/design-tokens';
 import type { DecisionTemplate, RoomSummary } from '@wafflr/shared-types';
 import { createRoom, joinRoom } from '../lib/rooms-api';
-import { getSavedRooms, saveParticipantCredential, saveRoomHistory, type SavedRoom } from '../lib/participant-credentials';
+import { getSavedRooms, type SavedRoom } from '../lib/participant-credentials';
 
 type Room = SavedRoom;
 type SetupMode = 'create' | 'join' | null;
@@ -59,8 +59,6 @@ function SetupFlow({
       setBusy(true);
       try {
         const result = await joinRoom(joinCode);
-        await saveParticipantCredential(result.room.id, result.participantCredential);
-        await saveRoomHistory({ ...result.room, status: 'Joined' });
         setCreatedRoom(result.room);
         onComplete(result.room);
       } catch (cause) {
@@ -81,8 +79,6 @@ function SetupFlow({
         mode: deckMode,
         cardsPerGuest: deckMode === 'guests' ? cardsPerGuest : undefined,
       });
-      await saveParticipantCredential(result.room.id, result.participantCredential);
-      await saveRoomHistory({ ...result.room, status: 'Created' });
       setCreatedRoom(result.room);
       onComplete(result.room);
     } catch (cause) {
