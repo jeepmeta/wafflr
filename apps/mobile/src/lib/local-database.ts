@@ -70,8 +70,6 @@ async function migrate(database: SQLite.SQLiteDatabase) {
           CHECK(phase IN ('collecting', 'voting', 'round_reveal', 'completed', 'cancelled', 'expired')),
         created_at TEXT NOT NULL,
         expires_at TEXT NOT NULL,
-        current_round INTEGER NOT NULL DEFAULT 1 CHECK(current_round >= 1),
-        winner_card_id TEXT,
         CHECK(
           (mode = 'guests' AND cards_per_guest BETWEEN 1 AND 3)
           OR (mode = 'host' AND cards_per_guest IS NULL)
