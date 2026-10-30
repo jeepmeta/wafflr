@@ -22,7 +22,7 @@ The UI calls the backend-independent contract in `apps/mobile/src/lib/room-repos
 
 ## Local-only behavior and limitations
 
-This is a device-local database, not a shared server. A room created in one app installation cannot be joined from another phone by entering its code. To test multiple participants at this stage, use the same local database or add a development-only participant simulator. Cross-device play requires a shared backend such as Supabase.
+This is a device-local database, not a shared server. A room created in one app installation cannot be joined from another phone by entering its code. The current local adapter also keeps one active participant credential per room per installation, so it prevents a second local join from overwriting the creator's credential. Cross-device and multi-participant testing require a development participant simulator or, later, a shared backend such as Supabase.
 
 SQLite does not reproduce PostgreSQL behavior, Supabase Row Level Security, PostgREST RPCs, or Edge Functions. The local implementation tests application rules and persistence, not remote authorization or deployment security.
 
