@@ -357,6 +357,7 @@ export async function listLocalCards(roomId: string): Promise<DecisionCard[]> {
     ...(row.category ? { category: row.category } : {}),
     ...(row.location ? { location: row.location } : {}),
     canEdit: participant.role === 'creator' || row.participant_id === participant.id,
+    isMine: row.participant_id === participant.id,
   }));
 }
 
@@ -395,7 +396,7 @@ export async function addLocalCard(roomId: string, input: {
     );
   });
 
-  return { id, title, ...(category ? { category } : {}), ...(location ? { location } : {}), canEdit: true };
+  return { id, title, ...(category ? { category } : {}), ...(location ? { location } : {}), canEdit: true, isMine: true };
 }
 
 export async function updateLocalCard(roomId: string, cardId: string, input: {
