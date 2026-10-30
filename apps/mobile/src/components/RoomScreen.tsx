@@ -146,7 +146,7 @@ export default function RoomScreen({ room, onBack }: Props) {
         </View>
       </>}
 
-      {round.phase === 'voting' && <>
+      {round.phase === 'voting' && (round.hasSubmitted ? <View style={s.panel}><Text style={s.panelTitle}>Your votes are in!</Text><Text style={s.hint}>Waiting for the rest of the group to submit their private ballots.</Text></View> : <>
         <View style={s.panel}>
           <Text style={s.panelTitle}>Choose Yep or Nah for every card</Text>
           <Text style={s.hint}>Your votes stay private until everyone has submitted.</Text>
@@ -161,7 +161,7 @@ export default function RoomScreen({ room, onBack }: Props) {
           <Text style={s.counter}>{Object.keys(votes).length} of {visibleCards.length} voted</Text>
           <Action title={busy ? 'Submitting…' : 'Submit my votes'} onPress={() => void submit()} disabled={!voteComplete || busy} />
         </View>
-      </>}
+      </>)}
 
       {round.phase === 'round_reveal' && <>
         <View style={s.panel}>
