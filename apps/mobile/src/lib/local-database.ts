@@ -325,6 +325,7 @@ type LocalCardRow = {
   title: string;
   category: string | null;
   location: string | null;
+  participant_id?: string;
 };
 
 async function requireLocalParticipant(database: SQLite.SQLiteDatabase, roomId: string) {
@@ -345,13 +346,14 @@ export async function listLocalCards(roomId: string): Promise<DecisionCard[]> {
   const database = await getLocalDatabase();
   await requireLocalParticipant(database, roomId);
   const rows = await database.getAllAsync<LocalCardRow>(
-    'SELECT id, title, category, location FROM cards WHERE room_id = ? ORDER BY created_at ASC',
+    'SELECT id, title, category, location, participant_id FROM cards WHERE room_id = ? ORDER BY created_at ASC',
     roomId,
   );
   return rows.map(row => ({
     id: row.id, title: row.title,
     ...(row.category ? { category: row.category } : {}),
     ...(row.location ? { location: row.location } : {}),
+    canEdit: participant.role === 'creator' || row.participant_id === participant.id,
   }));
 }
 
@@ -390,7 +392,7 @@ export async function addLocalCard(roomId: string, input: {
     );
   });
 
-  return { id, title, ...(category ? { category } : {}), ...(location ? { location } : {}) };
+  return { id, title, ...(category ? { category } : {}), ...(location ? { location } : {}), canEdit: true };
 }
 
 export async function updateLocalCard(roomId: string, cardId: string, input: {
