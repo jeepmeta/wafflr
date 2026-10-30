@@ -640,6 +640,11 @@ export async function getRoundResult(roomId: string): Promise<RoundResult | null
     if (room.current_round === 1) return { phase: 'voting', round: room.current_round, hasSubmitted: !!ballot };
   }
   if (room.phase === 'voting' && room.current_round > 1) {
+    const participant = await requireLocalParticipant(database, roomId);
+    const ballot = await database.getFirstAsync<{ id: string }>(
+      'SELECT id FROM ballots WHERE room_id = ? AND participant_id = ? AND round_number = ?',
+      roomId, participant.id, room.current_round,
+    );
     const tiedRows = await database.getAllAsync<{ card_id: string }>(
       'SELECT card_id FROM round_cards WHERE room_id = ? AND round_number = ? ORDER BY card_id',
       roomId, room.current_round,
@@ -651,7 +656,7 @@ export async function getRoundResult(roomId: string): Promise<RoundResult | null
       return row ? { id: row.id, title: row.title, ...(row.category ? { category: row.category } : {}), ...(row.location ? { location: row.location } : {}) } : null;
     }));
     return {
-      phase: 'voting', round: room.current_round,
+      phase: 'voting', round: room.current_round, hasSubmitted: !!ballot,
       tiedCards: tiedCards.filter((item): item is DecisionCard => item !== null),
     };
   }
