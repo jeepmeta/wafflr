@@ -5,7 +5,7 @@ import { colors, radii, spacing } from '@wafflr/design-tokens';
 import type { DecisionCard, RoomSummary, VoteChoice } from '@wafflr/shared-types';
 import { addCard, chooseWinner, deleteCard, getRoundResult, listCards, startTieBreak, startVoting, submitBallot } from '../lib/rooms-api';
 
-type Props = { room: RoomSummary; onBack: () => void };
+type Props = { room: RoomSummary & { status?: 'Created' | 'Joined' }; onBack: () => void };
 type RoundState = { phase: string; round: number; winner?: DecisionCard; tiedCards?: DecisionCard[]; scores?: { cardId: string; yepCount: number }[] };
 
 function Action({ title, onPress, disabled = false, quiet = false }: { title: string; onPress: () => void; disabled?: boolean; quiet?: boolean }) {
