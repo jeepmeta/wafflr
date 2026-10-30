@@ -565,23 +565,18 @@ export async function startLocalTieBreak(roomId: string): Promise<DecisionCard[]
     );
     if (room?.phase !== 'round_reveal') throw new Error('This room is not ready for a tie-breaker.');
     const previousRound = room.current_round - 1;
-    const tied = await database.getAllAsync<{ card_id: string }>(
-      `SELECT rc.card_id FROM round_cards rc
-       JOIN ballot_votes bv ON bv.card_id = rc.card_id
-       JOIN ballots b ON b.id = bv.ballot_id AND b.room_id = rc.room_id AND b.round_number = rc.round_number
-       WHERE rc.room_id = ? AND rc.round_number = ? AND bv.choice = 'yep'
-       GROUP BY rc.card_id
-       HAVING COUNT(*) = (
-         SELECT MAX(score) FROM (
-           SELECT COUNT(*) AS score FROM round_cards x
-           JOIN ballot_votes v ON v.card_id = x.card_id
-           JOIN ballots z ON z.id = v.ballot_id AND z.room_id = x.room_id AND z.round_number = x.round_number
-           WHERE x.room_id = ? AND x.round_number = ? AND v.choice = 'yep'
-           GROUP BY x.card_id
-         )
-       )`,
-      roomId, previousRound, roomId, previousRound,
+    const scoreRows = await database.getAllAsync<{ card_id: string; yep_count: number }>(
+      `SELECT rc.card_id,
+        SUM(CASE WHEN b.id IS NOT NULL AND bv.choice = 'yep' THEN 1 ELSE 0 END) AS yep_count
+       FROM round_cards rc
+       LEFT JOIN ballots b ON b.room_id = rc.room_id AND b.round_number = rc.round_number
+       LEFT JOIN ballot_votes bv ON bv.ballot_id = b.id AND bv.card_id = rc.card_id
+       WHERE rc.room_id = ? AND rc.round_number = ?
+       GROUP BY rc.card_id`,
+      roomId, previousRound,
     );
+    const highest = Math.max(...scoreRows.map(row => row.yep_count));
+    const tied = scoreRows.filter(row => row.yep_count === highest).map(row => ({ card_id: row.card_id }));
     if (tied.length < 2) throw new Error('There is no tie to break.');
     for (const card of tied) {
       await database.runAsync(
