@@ -19,6 +19,10 @@ The room code is a lookup identifier, not authorization. Each device receives a 
 
 The SQL-side join throttle depends on request-header information supplied through the Supabase/PostgREST request context. Its behavior and resistance to header spoofing must be verified on the actual deployment path. Do not treat it as production-grade rate limiting until that is tested. Creation abuse also needs protection.
 
+## Current mobile integration
+
+The Expo app now calls the create-room and join-room PostgREST RPCs. It stores returned participant credentials with Expo SecureStore. The mobile client uses only the public Supabase URL and anon key. The UI shows the returned room code after success. This is not yet verified against a live Supabase project; the migration remains unapplied, and Your Rooms still uses prototype data. Dependency installation, type checking, Expo Doctor, and native-device tests remain outstanding.
+
 ## Next implementation milestone
 
 Make real room creation and joining work from two separate devices:
