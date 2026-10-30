@@ -113,10 +113,10 @@ function SetupFlow({
         {deckMode === 'guests' && <View style={s.guestQuota}><Text style={s.modeTitle}>Choices per guest</Text><View style={{ flexDirection: 'row', gap: 8 }}>{([1, 2, 3] as const).map(n => <Pressable key={n} onPress={() => setCardsPerGuest(n)} style={[s.quotaChoice, cardsPerGuest === n && s.templateSelected]}><Text style={s.modeTitle}>{n}</Text></Pressable>)}</View></View>}
       </View>}
       {!!error && <Text style={s.errorText}>{error}</Text>}
-      <View style={s.flowButtons}>
+      {!createdRoom && <View style={s.flowButtons}>
         <Pressable onPress={() => { if (mode === 'create' && step !== 'template') setStep(step === 'mode' ? 'details' : 'template'); else close(); setError(''); }} style={s.backLink}><Text style={s.backLinkText}>{mode === 'create' && step !== 'template' ? 'Back' : 'Cancel'}</Text></Pressable>
         <View style={{ flex: 1 }}><Button label={busy ? (mode === 'join' ? 'Joining…' : 'Creating…') : mode === 'join' || step === 'mode' ? 'Continue' : 'Next'} onPress={() => { if (!busy && !createdRoom) void next(); }} compact /></View>
-      </View>
+      </View>}
       {mode === 'create' && step === 'mode' && !createdRoom && <Text style={s.demoNote}>Your group can join with the room code after the room is created.</Text>}
     </Animated.View>
   </Animated.View>;
@@ -151,7 +151,7 @@ export default function HomeScreen() {
         <Animated.Text entering={FadeInDown.delay(150).springify()} style={[s.wordmark, width < 390 && { fontSize: 40 }]}>WAFFLR</Animated.Text><Text style={s.tagline}>Stop waffling. Start deciding.</Text>
       </View>
       <View style={s.actions}><View style={{ flex: 1 }}><Button label="Create Room" onPress={beginCreate} /></View><View style={{ flex: 1 }}><Button label="Join Room" accent onPress={beginJoin} /></View></View>
-      {recentRoom && <Pressable style={s.recentRoom}><Text style={s.modeTitle}>{recentRoom.title}</Text><Text style={s.code}>{recentRoom.code}</Text><Text style={s.modeHint}>Room code · Share this with your group</Text></Pressable>}<Text style={s.footer}>A little help for the big “what should we do?”</Text>
+      {recentRoom && <View style={s.recentRoom}><Text style={s.modeTitle}>{recentRoom.title}</Text><Text style={s.code}>{recentRoom.code}</Text><Text style={s.modeHint}>Room code · Share this with your group</Text></View>}<Text style={s.footer}>A little help for the big “what should we do?”</Text>
     </Animated.View> : <View style={s.winner}>
       <Animated.View entering={FadeInDown.delay(80).springify()} style={{ alignItems: 'center', marginBottom: 16 }}><Text style={s.eyebrow}>THE GROUP HAS SPOKEN</Text><Text style={s.winnerHeading}>And the winner is…</Text></Animated.View>
       <Animated.View entering={FadeInDown.delay(200).springify()} style={s.winnerCard}><View style={s.foodArt}><View style={s.plate}><Text style={{ fontSize: 59 }}>🍕</Text></View></View><Text style={s.winnerLabel}>TONIGHT'S PICK</Text><Text style={s.winnerName}>Bob's Pizza Joint</Text><Text style={s.category}>Pizza · Italian</Text></Animated.View>
