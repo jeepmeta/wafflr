@@ -10,7 +10,7 @@ The SQL migration below remains a draft reference for the future PostgreSQL/Supa
 
 Supabase is the persistence and realtime layer. The backend—not the mobile client—owns authorization, validation, state transitions, and decision results.
 
-The first room-bootstrap migration now exists at `supabase/migrations/20261030210000_room_bootstrap.sql`. It is a repository draft only. It has not been applied to a Supabase project or validated against a live database.
+The room-bootstrap migration at `supabase/migrations/20261030210000_room_bootstrap.sql` is a future PostgreSQL implementation draft only. It has not been applied to a Supabase project or validated against a live database.
 
 ## Current schema foundation
 
@@ -25,17 +25,11 @@ The room code is a lookup identifier, not authorization. Each device receives a 
 
 The SQL-side join throttle depends on request-header information supplied through the Supabase/PostgREST request context. Its behavior and resistance to header spoofing must be verified on the actual deployment path. Do not treat it as production-grade rate limiting until that is tested. Creation abuse also needs protection.
 
-## Current mobile integration
+## Previous Supabase client wiring
 
-The Expo mobile app calls the create-room and join-room PostgREST RPCs using the public Supabase URL and anon key. The RPC response includes a one-time raw participant credential; the client immediately saves it with Expo SecureStore and stores only non-secret room summaries in secure local history. The web target intentionally blocks live room operations because this credential flow currently requires native secure storage.
+The earlier direct PostgREST room client has been replaced by the local SQLite adapter in `apps/mobile/src/lib/local-database.ts`. The app no longer requires `EXPO_PUBLIC_SUPABASE_URL` or `EXPO_PUBLIC_SUPABASE_ANON_KEY` to create or join rooms. The Supabase migration remains a future backend reference and is not active in the app.
 
-The Create Room and Join Room setup screens call the live RPC client and display the returned room code after success. The client validates the RPC payload before trusting it. It saves the participant credential first; if secure storage fails, the UI reports that the server-side room may already exist and warns against blindly retrying. Saving the optional local room-history entry is best-effort, so a history write failure does not make a successful room operation look like a failure. Your Rooms reads the locally saved room summaries. These changes are wired in the repository but have not been verified against a live Supabase project or on physical devices. The migration remains unapplied.
-
-Mobile environment variables are documented in `apps/mobile/.env.example`:
-- `EXPO_PUBLIC_SUPABASE_URL`
-- `EXPO_PUBLIC_SUPABASE_ANON_KEY`
-
-Only the public anon key belongs in the mobile app. Never add a service-role key to an Expo environment variable or client bundle.
+The local adapter uses Expo SQLite for room and participant records, Expo Crypto for random identifiers and credential hashing, and Expo SecureStore for each device's raw participant credential. The local room history remains a convenience layer.
 
 ## Database smoke test
 
