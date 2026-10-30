@@ -6,7 +6,7 @@ import { colors, radii, spacing } from '@wafflr/design-tokens';
 import type { DecisionTemplate, RoomSummary } from '@wafflr/shared-types';
 import { createRoom, joinRoom } from '../lib/rooms-api';
 import { getSavedRooms, type SavedRoom } from '../lib/participant-credentials';
-import RoomScreen from './room';
+import RoomScreen from '../components/RoomScreen';
 
 type Room = SavedRoom;
 type SetupMode = 'create' | 'join' | null;
