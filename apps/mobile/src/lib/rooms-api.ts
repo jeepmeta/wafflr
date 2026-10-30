@@ -1,4 +1,6 @@
 import type { DecisionTemplate, RoomSummary } from '@wafflr/shared-types';
+import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import { saveParticipantCredential } from './participant-credentials';
 
 type RoomMode = 'host' | 'guests';
@@ -26,6 +28,21 @@ function requireConfiguration() {
   if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error('Wafflr rooms are not configured. Add the Supabase URL and anon key to the mobile environment.');
   }
+}
+
+async function persistParticipantCredential(roomId: string, credential: string) {
+  if (Platform.OS === 'web') {
+    throw new Error('Secure room access is currently supported in the iOS and Android apps.');
+  }
+  if (!/^[a-f0-9]{64}$/i.test(credential)) {
+    throw new Error('The room service returned an invalid participant credential.');
+  }
+  await SecureStore.setItemAsync(`wafflr:participant:${roomId}`, credential);
+}
+
+export async function getParticipantCredential(roomId: string): Promise<string | null> {
+  if (Platform.OS === 'web') return null;
+  return SecureStore.getItemAsync(`wafflr:participant:${roomId}`);
 }
 
 async function callRoomRpc(
@@ -59,6 +76,8 @@ async function callRoomRpc(
   }
 
   await saveParticipantCredential(payload.room.id, payload.participantCredential);
+
+  await persistParticipantCredential(payload.room.id, payload.participantCredential);
 
   return {
     room: {
