@@ -3,6 +3,8 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDime
 import Animated, { FadeIn, FadeInDown, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, radii, spacing } from '@wafflr/design-tokens';
+import type { DecisionTemplate, RoomSummary } from '@wafflr/shared-types';
+import { createRoom, joinRoom } from '../lib/rooms-api';
 
 type Room = { id: string; title: string; code: string; status: string; updated: string };
 type SetupMode = 'create' | 'join' | null;
@@ -42,19 +44,29 @@ function SetupFlow({
 }: {
   mode: Exclude<SetupMode, null>; close: () => void; template: Template; setTemplate: (v: Template) => void;
   roomTitle: string; setRoomTitle: (v: string) => void; joinCode: string; setJoinCode: (v: string) => void;
-  deckMode: 'host' | 'guests'; setDeckMode: (v: 'host' | 'guests') => void; onComplete: () => void;
+  deckMode: 'host' | 'guests'; setDeckMode: (v: 'host' | 'guests') => void; onComplete: (room: RoomSummary) => void;
 }) {
   const [step, setStep] = useState<'template' | 'details' | 'mode'>('template');
   const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [cardsPerGuest, setCardsPerGuest] = useState<1 | 2 | 3>(1);
+  const [createdRoom, setCreatedRoom] = useState<RoomSummary | null>(null);
   const templates: Template[] = ['Where to Eat', 'What to Watch', 'What to Do', 'Custom'];
   const joinValid = joinCode.trim().length === 6;
   const createTitleValid = roomTitle.trim().length > 0;
-  const heading = mode === 'join' ? 'Join a Room' : step === 'template' ? 'What are we deciding?' : step === 'details' ? 'Name your room' : 'Who adds the choices?';
+  const heading = createdRoom ? (mode === 'create' ? 'Room created!' : 'You’re in!') : mode === 'join' ? 'Join a Room' : step === 'template' ? 'What are we deciding?' : step === 'details' ? 'Name your room' : 'Who adds the choices?';
 
-  const next = () => {
+  const next = async () => {
     if (mode === 'join') {
       if (!joinValid) { setError('Enter the 6-character room code.'); return; }
-      setError('That code has not been connected to live rooms yet.');
+      setBusy(true);
+      try {
+        const result = await joinRoom(joinCode);
+        setCreatedRoom(result.room);
+        onComplete(result.room);
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : 'Could not join this room.');
+      } finally { setBusy(false); }
       return;
     }
     if (step === 'template') { setStep('details'); setError(''); return; }
@@ -62,14 +74,31 @@ function SetupFlow({
       if (!createTitleValid) { setError('Give your room a name first.'); return; }
       setStep('mode'); setError(''); return;
     }
-    onComplete();
+    setBusy(true);
+    try {
+      const result = await createRoom({
+        title: roomTitle,
+        template: ({ 'Where to Eat': 'restaurant', 'What to Watch': 'movie', 'What to Do': 'activity', Custom: 'custom' } as const)[template] as DecisionTemplate,
+        mode: deckMode,
+        cardsPerGuest: deckMode === 'guests' ? cardsPerGuest : undefined,
+      });
+      setCreatedRoom(result.room);
+      onComplete(result.room);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not create this room.');
+    } finally { setBusy(false); }
   };
 
   return <Animated.View entering={FadeIn.duration(150)} style={s.backdrop}>
     <Pressable accessibilityLabel="Close setup" onPress={close} style={StyleSheet.absoluteFill} />
     <Animated.View entering={FadeInDown.springify()} style={s.modal}>
       <View style={s.modalHead}><Text style={s.modalTitle}>{heading}</Text><Pressable onPress={close} style={s.close}><Text style={s.closeText}>×</Text></Pressable></View>
-      {mode === 'join' ? <>
+      {createdRoom ? <View style={{ alignItems: 'center', gap: 9, paddingVertical: 12 }}>
+        <Text style={s.formHint}>{createdRoom.title}</Text>
+        <Text style={s.code}>{createdRoom.code}</Text>
+        <Text style={s.roomMeta}>Share this six-character code with your group.</Text>
+        <Button label="Done" compact onPress={close} />
+      </View> : mode === 'join' ? <>
         <Text style={s.formHint}>Enter the room code your host shared with you.</Text>
         <TextInput value={joinCode} onChangeText={v => { setJoinCode(v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6)); setError(''); }} autoCapitalize="characters" autoCorrect={false} maxLength={6} placeholder="ABC123" placeholderTextColor="#B7AEB4" style={s.codeInput} accessibilityLabel="Six-character room code" />
       </> : step === 'template' ? <View style={s.templateGrid}>
@@ -81,13 +110,14 @@ function SetupFlow({
         <Text style={s.formHint}>Choose how the deck gets made.</Text>
         <Pressable onPress={() => setDeckMode('host')} style={[s.modeChoice, deckMode === 'host' && s.templateSelected]}><Text style={s.modeTitle}>I'll add all the choices</Text><Text style={s.modeHint}>Build the deck yourself.</Text></Pressable>
         <Pressable onPress={() => setDeckMode('guests')} style={[s.modeChoice, deckMode === 'guests' && s.templateSelected]}><Text style={s.modeTitle}>Everyone contributes</Text><Text style={s.modeHint}>Each person adds choices before voting.</Text></Pressable>
+        {deckMode === 'guests' && <View style={s.guestQuota}><Text style={s.modeTitle}>Choices per guest</Text><View style={{ flexDirection: 'row', gap: 8 }}>{([1, 2, 3] as const).map(n => <Pressable key={n} onPress={() => setCardsPerGuest(n)} style={[s.quotaChoice, cardsPerGuest === n && s.templateSelected]}><Text style={s.modeTitle}>{n}</Text></Pressable>)}</View></View>}
       </View>}
       {!!error && <Text style={s.errorText}>{error}</Text>}
       <View style={s.flowButtons}>
         <Pressable onPress={() => { if (mode === 'create' && step !== 'template') setStep(step === 'mode' ? 'details' : 'template'); else close(); setError(''); }} style={s.backLink}><Text style={s.backLinkText}>{mode === 'create' && step !== 'template' ? 'Back' : 'Cancel'}</Text></Pressable>
-        <View style={{ flex: 1 }}><Button label={mode === 'join' || step === 'mode' ? 'Continue' : 'Next'} onPress={next} compact /></View>
+        <View style={{ flex: 1 }}><Button label={busy ? (mode === 'join' ? 'Joining…' : 'Creating…') : mode === 'join' || step === 'mode' ? 'Continue' : 'Next'} onPress={() => { if (!busy && !createdRoom) void next(); }} compact /></View>
       </View>
-      {mode === 'create' && step === 'mode' && <Text style={s.demoNote}>Room saving and live sharing are the next build step. This prototype continues to the sample winner screen.</Text>}
+      {mode === 'create' && step === 'mode' && !createdRoom && <Text style={s.demoNote}>Your group can join with the room code after the room is created.</Text>}
     </Animated.View>
   </Animated.View>;
 }
@@ -101,13 +131,14 @@ export default function HomeScreen() {
   const [joinCode, setJoinCode] = useState('');
   const [deckMode, setDeckMode] = useState<'host' | 'guests'>('host');
   const [backVisible, setBackVisible] = useState(false);
+  const [recentRoom, setRecentRoom] = useState<RoomSummary | null>(null);
   const { width } = useWindowDimensions();
   useEffect(() => {
     if (screen !== 'winner') { setBackVisible(false); return; }
     const timer = setTimeout(() => setBackVisible(true), 2200);
     return () => clearTimeout(timer);
   }, [screen]);
-  const goWinner = () => { setRooms(false); setSetupMode(null); setScreen('winner'); };\n  const beginCreate = () => { setTemplate('Where to Eat'); setRoomTitle(''); setSetupMode('create'); };\n  const beginJoin = () => { setJoinCode(''); setSetupMode('join'); };
+  const handleRoomSuccess = (room: RoomSummary) => { setRecentRoom(room); };\n  const goWinner = () => { setRooms(false); setSetupMode(null); setScreen('winner'); };\n  const beginCreate = () => { setTemplate('Where to Eat'); setRoomTitle(''); setSetupMode('create'); };\n  const beginJoin = () => { setJoinCode(''); setSetupMode('join'); };
   return <SafeAreaView style={s.safe} edges={['top', 'left', 'right', 'bottom']}><View style={s.shell}>
     <View style={s.header}>
       <View style={s.brand}><View style={s.miniWaffle}><Text style={{ color: colors.syrup, fontSize: 16 }}>▦</Text></View><Text style={s.brandText}>WAFFLR</Text></View>
@@ -119,7 +150,7 @@ export default function HomeScreen() {
         <Animated.Text entering={FadeInDown.delay(150).springify()} style={[s.wordmark, width < 390 && { fontSize: 40 }]}>WAFFLR</Animated.Text><Text style={s.tagline}>Stop waffling. Start deciding.</Text>
       </View>
       <View style={s.actions}><View style={{ flex: 1 }}><Button label="Create Room" onPress={beginCreate} /></View><View style={{ flex: 1 }}><Button label="Join Room" accent onPress={beginJoin} /></View></View>
-      <Text style={s.footer}>A little help for the big “what should we do?”</Text>
+      {recentRoom && <Pressable onPress={() => setSetupMode('join')} style={s.recentRoom}><Text style={s.modeTitle}>{recentRoom.title}</Text><Text style={s.code}>{recentRoom.code}</Text><Text style={s.modeHint}>Room code · Tap Create or Join to continue exploring</Text></Pressable>}<Text style={s.footer}>A little help for the big “what should we do?”</Text>
     </Animated.View> : <View style={s.winner}>
       <Animated.View entering={FadeInDown.delay(80).springify()} style={{ alignItems: 'center', marginBottom: 16 }}><Text style={s.eyebrow}>THE GROUP HAS SPOKEN</Text><Text style={s.winnerHeading}>And the winner is…</Text></Animated.View>
       <Animated.View entering={FadeInDown.delay(200).springify()} style={s.winnerCard}><View style={s.foodArt}><View style={s.plate}><Text style={{ fontSize: 59 }}>🍕</Text></View></View><Text style={s.winnerLabel}>TONIGHT'S PICK</Text><Text style={s.winnerName}>Bob's Pizza Joint</Text><Text style={s.category}>Pizza · Italian</Text></Animated.View>
@@ -127,7 +158,7 @@ export default function HomeScreen() {
       {backVisible ? <Animated.View entering={FadeIn.duration(160)} style={{ width: '100%', maxWidth: 340, marginTop: 8 }}><Button label="Back to Home" compact onPress={() => setScreen('home')} /></Animated.View> : <Text style={s.waiting}>Picking a winner…</Text>}
     </View>}
     <Text style={s.copyright}>© WAFFLR</Text>
-  </View>{rooms && <Rooms close={() => setRooms(false)} />}{setupMode && <SetupFlow mode={setupMode} close={() => setSetupMode(null)} template={template} setTemplate={setTemplate} roomTitle={roomTitle} setRoomTitle={setRoomTitle} joinCode={joinCode} setJoinCode={setJoinCode} deckMode={deckMode} setDeckMode={setDeckMode} onComplete={goWinner} />}</SafeAreaView>;
+  </View>{rooms && <Rooms close={() => setRooms(false)} />}{setupMode && <SetupFlow mode={setupMode} close={() => setSetupMode(null)} template={template} setTemplate={setTemplate} roomTitle={roomTitle} setRoomTitle={setRoomTitle} joinCode={joinCode} setJoinCode={setJoinCode} deckMode={deckMode} setDeckMode={setDeckMode} onComplete={handleRoomSuccess} />}</SafeAreaView>;
 }
 
 const s = StyleSheet.create({
@@ -206,5 +237,8 @@ const s = StyleSheet.create({
   backLink: { paddingHorizontal: 8, paddingVertical: 12 },
   backLinkText: { color: colors.syrup, fontSize: 14, fontWeight: '800' },
   demoNote: { color: '#82777E', fontSize: 11, lineHeight: 16, textAlign: 'center', marginTop: 12 },
+  guestQuota: { gap: 8, paddingTop: 8 },
+  quotaChoice: { width: 42, height: 42, borderRadius: 12, borderWidth: 2, borderColor: '#E9DDBE', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFCF4' },
+  recentRoom: { alignItems: 'center', gap: 4, marginBottom: 14, padding: 12, borderWidth: 2, borderColor: colors.ink, borderRadius: 18, backgroundColor: colors.cream },
   code: { color: colors.ink, fontSize: 30, fontWeight: '900', letterSpacing: 5 },
 });
