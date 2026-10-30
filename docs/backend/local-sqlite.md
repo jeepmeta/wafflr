@@ -22,11 +22,11 @@ The UI calls the backend-independent contract in `apps/mobile/src/lib/room-repos
 
 ## Local-only behavior and limitations
 
-This is a device-local database, not a shared server. A room created in one app installation cannot be joined from another phone by entering its code. The current local adapter also keeps one active participant credential per room per installation, so it prevents a second local join from overwriting the creator's credential. Cross-device and multi-participant testing require a development participant simulator or, later, a shared backend such as Supabase.
+This is a device-local database, not a shared server. A room created in one app installation cannot be joined from another phone by entering its code. The current local adapter keeps one active participant credential per room per installation, so it prevents a second local join from overwriting the creator's credential. A room's six-character code is only useful within the same local database. Cross-device and true group testing require a development participant simulator or, later, a shared backend such as Supabase.
 
 SQLite does not reproduce PostgreSQL behavior, Supabase Row Level Security, PostgREST RPCs, or Edge Functions. The local implementation tests application rules and persistence, not remote authorization or deployment security.
 
-The local service now supports card listing, contribution, editing, removal, and the creator's transition into voting. It enforces collection phase, the one-hundred-card cap, host-versus-guest contribution mode, guest card quota, ownership for guest edits/removals, and the two-card minimum before voting. Ballot submission, winner calculation, tie-breakers, and expiration cleanup still need to be implemented as service operations. The presence of ballot tables does not mean those features are complete.
+The local service supports room creation and joining on the same device, card listing and contribution, card editing/removal, the creator's transition into voting, private Yep/Nah ballot submission, approval scoring, automatic tie-break rounds, and creator selection after a repeated tie. It enforces collection phase, the one-hundred-card cap, host-versus-guest contribution mode, guest card quota, ownership for guest edits/removals, and the two-card minimum before voting. The mobile room screen is wired to these operations. Expiration cleanup, a multi-participant simulator, and robust recovery from partial local writes remain unfinished.
 
 ## Development
 
