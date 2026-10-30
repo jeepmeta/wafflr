@@ -60,4 +60,5 @@ export interface RoundResult {
   winner?: DecisionCard;
   tiedCards?: DecisionCard[];
   scores?: ApprovalScore[];
+  hasSubmitted?: boolean;
 }
