@@ -2,7 +2,7 @@ import type { DecisionTemplate, RoomSummary } from '@wafflr/shared-types';
 import { Platform } from 'react-native';
 import { saveParticipantCredential, saveRoomHistory } from './participant-credentials';
 
-type RoomMode = 'host' | 'guests';
+import type { RoomMode } from '@wafflr/shared-types';
 
 type RoomApiResult = { room: RoomSummary };
 
@@ -12,6 +12,7 @@ type SupabaseRoomResponse = {
     code: string;
     title: string;
     template: DecisionTemplate;
+    mode: RoomMode;
     phase: RoomSummary['phase'];
     guestCount: number;
     createdAt: string;
