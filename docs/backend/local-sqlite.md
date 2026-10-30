@@ -8,13 +8,13 @@ The mobile app uses Expo SQLite. The database file is named `wafflr-local.db` an
 
 ## Current implementation
 
-The first schema version contains:
+The current schema version contains:
 
 - `rooms`: room code, title, decision template, deck mode, guest card quota, phase, creation time, and expiration;
 - `participants`: creator/guest records and SHA-256 hashes of participant credentials;
 - `cards`: contributed decision cards;
 - `ballots`: submitted participant ballots and round number;
-- `ballot_votes`: Yep/Nah choices for cards in a ballot.
+- `ballot_votes`: Yep/Nah choices for cards in a ballot;\n- `room_join_attempts`: local per-room-code attempt windows for exercising the join-throttle behavior.
 
 Room codes are six characters and case-insensitive. They identify a room but do not authorize access. Each participant receives a separate random 256-bit credential. The raw credential is stored in Expo SecureStore; SQLite stores only its SHA-256 hash.
 
@@ -26,7 +26,7 @@ This is a device-local database, not a shared server. A room created in one app 
 
 SQLite does not reproduce PostgreSQL behavior, Supabase Row Level Security, PostgREST RPCs, or Edge Functions. The local implementation tests application rules and persistence, not remote authorization or deployment security.
 
-The current migration creates the tables needed for the game flow, but card operations, ballot submission, winner calculation, tie-breakers, and expiration cleanup still need to be implemented and tested as service operations. The presence of their tables does not mean those features are complete.
+The local service now supports card listing, contribution, editing, removal, and the creator's transition into voting. It enforces collection phase, the one-hundred-card cap, host-versus-guest contribution mode, guest card quota, ownership for guest edits/removals, and the two-card minimum before voting. Ballot submission, winner calculation, tie-breakers, and expiration cleanup still need to be implemented as service operations. The presence of ballot tables does not mean those features are complete.
 
 ## Development
 
