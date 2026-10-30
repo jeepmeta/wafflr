@@ -6,6 +6,7 @@ import { colors, radii, spacing } from '@wafflr/design-tokens';
 import type { DecisionTemplate, RoomSummary } from '@wafflr/shared-types';
 import { createRoom, joinRoom } from '../lib/rooms-api';
 import { getSavedRooms, type SavedRoom } from '../lib/participant-credentials';
+import RoomScreen from './room';
 
 type Room = SavedRoom;
 type SetupMode = 'create' | 'join' | null;
@@ -120,7 +121,8 @@ function SetupFlow({
 }
 
 export default function HomeScreen() {
-  const [screen, setScreen] = useState<'home' | 'winner'>('home');
+  const [screen, setScreen] = useState<'home' | 'winner' | 'room'>('home');
+  const [activeRoom, setActiveRoom] = useState<SavedRoom | null>(null);
   const [rooms, setRooms] = useState(false);
   const [setupMode, setSetupMode] = useState<SetupMode>(null);
   const [template, setTemplate] = useState<Template>('Where to Eat');
@@ -137,9 +139,10 @@ export default function HomeScreen() {
     const timer = setTimeout(() => setBackVisible(true), 2200);
     return () => clearTimeout(timer);
   }, [screen]);
-  const handleRoomSuccess = (room: RoomSummary) => { const saved = { ...room, status: setupMode === 'join' ? 'Joined' as const : 'Created' as const }; setRecentRoom(room); setSavedRooms(current => [saved, ...current.filter(item => item.id !== room.id)].slice(0, 8)); };
+  const handleRoomSuccess = (room: RoomSummary) => { const saved = { ...room, status: setupMode === 'join' ? 'Joined' as const : 'Created' as const }; setRecentRoom(room); setActiveRoom(saved); setSavedRooms(current => [saved, ...current.filter(item => item.id !== room.id)].slice(0, 8)); setSetupMode(null); setScreen('room'); };
   const beginCreate = () => { setTemplate('Where to Eat'); setRoomTitle(''); setSetupMode('create'); };
   const beginJoin = () => { setJoinCode(''); setSetupMode('join'); };
+  if (screen === 'room' && activeRoom) return <RoomScreen room={activeRoom} onBack={() => { setScreen('home'); setActiveRoom(null); void getSavedRooms().then(setSavedRooms).catch(() => undefined); }} />;
   return <SafeAreaView style={s.safe} edges={['top', 'left', 'right', 'bottom']}><View style={s.shell}>
     <View style={s.header}>
       <View style={s.brand}><View style={s.miniWaffle}><Text style={{ color: colors.syrup, fontSize: 16 }}>▦</Text></View><Text style={s.brandText}>WAFFLR</Text></View>
