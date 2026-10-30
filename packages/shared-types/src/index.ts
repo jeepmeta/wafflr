@@ -30,6 +30,7 @@ export interface RoomSummary {
   title: string;
   template: DecisionTemplate;
   mode?: RoomMode;
+  cardsPerGuest?: 1 | 2 | 3;
   phase: RoomPhase;
   guestCount: number;
   createdAt: string;
