@@ -14,6 +14,7 @@ type LocalRoomRow = {
   title: string;
   template: DecisionTemplate;
   mode: RoomMode;
+  cards_per_guest: 1 | 2 | 3 | null;
   phase: RoomPhase;
   guest_count: number;
   created_at: string;
@@ -44,6 +45,7 @@ function toRoomSummary(row: LocalRoomRow): RoomSummary {
     title: row.title,
     template: row.template,
     mode: row.mode,
+    ...(row.cards_per_guest ? { cardsPerGuest: row.cards_per_guest } : {}),
     phase: row.phase,
     guestCount: row.guest_count,
     createdAt: row.created_at,
@@ -230,6 +232,7 @@ export async function createLocalRoom(input: {
   const room: RoomSummary = {
     id: roomId, code, title, template: input.template, mode: input.mode,
     phase: 'collecting', guestCount: 1, createdAt, expiresAt,
+    ...(input.mode === 'guests' ? { cardsPerGuest: input.cardsPerGuest } : {}),
   };
 
   try {
