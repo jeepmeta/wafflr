@@ -20,6 +20,7 @@ export interface DecisionCard {
   category?: string;
   location?: string;
   canEdit?: boolean;
+  isMine?: boolean;
 }
 
 export type RoomMode = "host" | "guests";
