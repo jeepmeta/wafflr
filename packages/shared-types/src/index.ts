@@ -21,11 +21,14 @@ export interface DecisionCard {
   location?: string;
 }
 
+export type RoomMode = "host" | "guests";
+
 export interface RoomSummary {
   id: string;
   code: string;
   title: string;
   template: DecisionTemplate;
+  mode?: RoomMode;
   phase: RoomPhase;
   guestCount: number;
   createdAt: string;
