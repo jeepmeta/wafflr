@@ -23,3 +23,23 @@ export function joinRoom(code: string): Promise<{ room: RoomSummary }> {
 export function listRooms(): Promise<RoomSummary[]> {
   return activeRepository.listRooms();
 }
+
+export function listCards(roomId: string) {
+  return activeRepository.listCards(roomId);
+}
+
+export function addCard(roomId: string, input: import('./room-repository').CreateCardInput) {
+  return activeRepository.addCard(roomId, input);
+}
+
+export function updateCard(roomId: string, cardId: string, input: import('./room-repository').CreateCardInput) {
+  return activeRepository.updateCard(roomId, cardId, input);
+}
+
+export function deleteCard(roomId: string, cardId: string) {
+  return activeRepository.deleteCard(roomId, cardId);
+}
+
+export function startVoting(roomId: string) {
+  return activeRepository.startVoting(roomId);
+}
