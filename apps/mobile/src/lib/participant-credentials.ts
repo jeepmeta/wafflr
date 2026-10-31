@@ -69,3 +69,11 @@ export async function getSavedRooms(): Promise<SavedRoom[]> {
   }));
   return records.filter((room): room is SavedRoom => room !== null);
 }
+
+export async function removeRoomHistory(roomIds: string[]) {
+  if (Platform.OS === 'web' || roomIds.length === 0) return;
+  const ids = await getRoomHistoryIds();
+  const removed = new Set(roomIds);
+  await Promise.all(roomIds.map(id => SecureStore.deleteItemAsync(`wafflr:room:${id}`)));
+  await SecureStore.setItemAsync(roomHistoryKey, JSON.stringify(ids.filter(id => !removed.has(id))));
+}
