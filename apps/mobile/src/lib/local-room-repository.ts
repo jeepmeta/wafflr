@@ -19,5 +19,5 @@ export const localRoomRepository: RoomRepository = {
   submitBallot: submitLocalBallot,
   startTieBreak: startLocalTieBreak,
   chooseWinner: chooseLocalWinner,
-  getRoundResult: getLocalRoundResult,
+  getRoundResult,
 };
