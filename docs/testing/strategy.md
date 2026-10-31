@@ -13,7 +13,7 @@ Keep logic deterministic and test without Expo or Supabase. Cover:
 - tie-breaker deck contains only tied leaders;
 - stable behavior when card order changes, where ordering is part of the contract.
 
-The current package has scoring functions but does not yet have a test runner or committed test suite. Choose a lightweight runner when the first tests are added and justify any dependency.
+The package now has a dependency-free Node test suite at `packages/game-engine/test/scoring.test.mjs`, run with `pnpm --filter @wafflr/game-engine test`. It covers empty ballots, zero scores, Yep/Nah behavior, duplicate Yep records, unknown card IDs, ties, and stable deck ordering. It uses Node's built-in test runner; the repository's Node 24 minimum provides TypeScript type stripping for the imported engine source.
 
 ## Shared contracts
 
