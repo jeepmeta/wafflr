@@ -13,6 +13,7 @@
     "@wafflr/shared-types": "workspace:*"
   },
   "scripts": {
-    "check-types": "tsc --noEmit -p tsconfig.json"
+    "check-types": "tsc --noEmit -p tsconfig.json",
+    "test": "node --test"
   }
 }
