@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, radii, spacing } from '@wafflr/design-tokens';
 import type { DecisionCard, RoomSummary, VoteChoice } from '@wafflr/shared-types';
 import { addCard, chooseWinner, deleteCard, getRoundResult, listCards, startTieBreak, startVoting, submitBallot, updateCard } from '../lib/rooms-api';
-import { createLocalSimulatorGuest, getActiveLocalParticipantRole, switchLocalSimulatorToCreator } from '../lib/local-database';
+import { createLocalSimulatorGuest, getActiveLocalParticipantRole, listLocalSimulatorGuests, switchLocalSimulatorGuest, switchLocalSimulatorToCreator } from '../lib/local-database';
 
 type Props = { room: RoomSummary & { status?: 'Created' | 'Joined' }; onBack: () => void };
 type RoundState = { phase: string; round: number; winner?: DecisionCard; tiedCards?: DecisionCard[]; scores?: { cardId: string; yepCount: number }[] };
@@ -26,6 +26,7 @@ export default function RoomScreen({ room, onBack }: Props) {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [isCreator, setIsCreator] = useState(room.status === undefined || room.status === 'Created');
+  const [simulatorGuests, setSimulatorGuests] = useState<{ id: string; label: string; isActive: boolean }[]>([]);
   const visibleCards = roundCards ?? cards;
   const voteComplete = visibleCards.length >= 2 && visibleCards.every(card => votes[card.id]);
   const titleForPhase = round.phase === 'completed' ? 'We have a winner!' :
@@ -33,8 +34,9 @@ export default function RoomScreen({ room, onBack }: Props) {
     round.phase === 'round_reveal' ? 'It’s a tie!' : 'Build the deck';
 
   const refresh = async () => {
-    const [nextCards, result, role] = await Promise.all([listCards(room.id), getRoundResult(room.id), getActiveLocalParticipantRole(room.id)]);
+    const [nextCards, result, role, guests] = await Promise.all([listCards(room.id), getRoundResult(room.id), getActiveLocalParticipantRole(room.id), __DEV__ ? listLocalSimulatorGuests(room.id) : Promise.resolve([])]);
     setCards(nextCards);
+    setSimulatorGuests(guests);
     setIsCreator(role === 'creator');
     if (result) {
       setRound(result);
@@ -62,6 +64,17 @@ export default function RoomScreen({ room, onBack }: Props) {
       setVotes({});
       await refresh();
       setNotice('Switched back to the room creator.');
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not switch participants.'); }
+    finally { setBusy(false); }
+  };
+
+  const switchToGuest = async (participantId: string, label: string) => {
+    setBusy(true); setError(''); setNotice('');
+    try {
+      await switchLocalSimulatorGuest(room.id, participantId);
+      setVotes({});
+      await refresh();
+      setNotice(`Switched to ${label}.`);
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not switch participants.'); }
     finally { setBusy(false); }
   };
@@ -145,8 +158,10 @@ export default function RoomScreen({ room, onBack }: Props) {
       <Text style={s.subtitle}>{room.title}</Text>
       {__DEV__ && <View style={s.simulatorPanel}>
         <Text style={s.simulatorLabel}>LOCAL TESTING · {isCreator ? 'CREATOR' : 'GUEST'}</Text>
-        <Action title={busy ? 'Switching…' : isCreator ? '＋ Add guest & switch' : '↩ Switch to creator'} quiet onPress={() => void (isCreator ? addSimulatorGuest() : returnToCreator())} disabled={busy} />
-        <Text style={s.simulatorHint}>Development only. Each simulated participant has a separate anonymous credential.</Text>
+        <Action title={busy ? 'Please wait…' : '＋ Add guest & switch'} quiet onPress={() => void addSimulatorGuest()} disabled={busy} />
+        {!isCreator && <Action title="↩ Switch to creator" quiet onPress={() => void returnToCreator()} disabled={busy} />}
+        {simulatorGuests.map(guest => <Action key={guest.id} title={guest.label + (guest.isActive ? ' · Active' : '')} quiet onPress={() => void switchToGuest(guest.id, guest.label)} disabled={busy || guest.isActive} />)}
+        <Text style={s.simulatorHint}>Development only. Switch between anonymous local participants to test separate contributions and ballots.</Text>
       </View>}
 
       {round.phase === 'collecting' && <>
