@@ -32,7 +32,7 @@ The local service supports room creation, the join-code lookup operation for a r
 
 ## Development
 
-Install the Expo SDK 58-compatible packages and regenerate the pnpm lockfile (the package manifest has been updated; the lockfile still needs this install step):
+Install the Expo SDK 58-compatible packages from the committed manifest and lockfile:
 
 ```sh
 pnpm install
