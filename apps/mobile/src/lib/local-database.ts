@@ -617,8 +617,8 @@ export async function submitLocalBallot(roomId: string, votes: { cardId: string;
     const scoreOutput = scores.map(score => ({ cardId: score.card_id, yepCount: score.yep_count }));
     if (leaders.length === 1) {
       await database.runAsync(
-        'UPDATE rooms SET phase = \'completed\', winner_card_id = ? WHERE id = ?',
-        leaders[0].card_id, roomId,
+        'UPDATE rooms SET phase = \'completed\', winner_card_id = ?, expires_at = ? WHERE id = ?',
+        leaders[0].card_id, new Date(Date.now() + ROOM_LIFETIME_MS).toISOString(), roomId,
       );
       const winner = await database.getFirstAsync<LocalCardRow>(
         'SELECT id, title, category, location FROM cards WHERE id = ?', leaders[0].card_id,
@@ -706,8 +706,8 @@ export async function chooseLocalWinner(roomId: string, cardId: string) {
     );
     if (!valid) throw new Error('Choose one of the tied cards.');
     await database.runAsync(
-      'UPDATE rooms SET phase = \'completed\', winner_card_id = ? WHERE id = ?',
-      cardId, roomId,
+      'UPDATE rooms SET phase = \'completed\', winner_card_id = ?, expires_at = ? WHERE id = ?',
+      cardId, new Date(Date.now() + ROOM_LIFETIME_MS).toISOString(), roomId,
     );
   });
 }
