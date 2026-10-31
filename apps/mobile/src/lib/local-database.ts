@@ -406,9 +406,9 @@ export async function createLocalSimulatorGuest(roomId: string): Promise<void> {
     const room = await database.getFirstAsync<{ phase: RoomPhase; expires_at: string }>(
       'SELECT phase, expires_at FROM rooms WHERE id = ?', roomId,
     );
-    if (!room || room.phase === 'completed' || room.phase === 'cancelled' || room.phase === 'expired' ||
+    if (!room || room.phase !== 'collecting' ||
       new Date(room.expires_at).getTime() <= Date.now()) {
-      throw new Error('This room is no longer available for simulator participants.');
+      throw new Error('New simulator participants can only join while the room is collecting choices.');
     }
     await database.runAsync(
       'INSERT INTO participants (id, room_id, credential_hash, role, joined_at) VALUES (?, ?, ?, \'guest\', ?)',
