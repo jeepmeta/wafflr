@@ -431,6 +431,42 @@ export async function switchLocalSimulatorToCreator(roomId: string): Promise<voi
   await SecureStore.deleteItemAsync(simulatorActiveKey(roomId));
 }
 
+export async function listLocalSimulatorGuests(roomId: string): Promise<{ id: string; label: string; isActive: boolean }[]> {
+  if (!__DEV__) return [];
+  const database = await getLocalDatabase();
+  const SecureStore = await import('expo-secure-store');
+  const [rows, activeId] = await Promise.all([
+    database.getAllAsync<{ id: string }>(
+      "SELECT id FROM participants WHERE room_id = ? AND role = 'guest' ORDER BY joined_at ASC, id ASC",
+      roomId,
+    ),
+    SecureStore.getItemAsync(simulatorActiveKey(roomId)),
+  ]);
+  const available = await Promise.all(rows.map(async row => ({
+    id: row.id,
+    credential: await SecureStore.getItemAsync(simulatorCredentialKey(roomId, row.id)),
+  })));
+  return available.filter(item => item.credential).map((item, index) => ({
+    id: item.id,
+    label: `Guest ${index + 1}`,
+    isActive: item.id === activeId,
+  }));
+}
+
+export async function switchLocalSimulatorGuest(roomId: string, participantId: string): Promise<void> {
+  if (!__DEV__) throw new Error('The participant simulator is only available in development builds.');
+  const database = await getLocalDatabase();
+  const participant = await database.getFirstAsync<{ id: string }>(
+    "SELECT id FROM participants WHERE id = ? AND room_id = ? AND role = 'guest'",
+    participantId, roomId,
+  );
+  if (!participant) throw new Error('That simulator participant is not part of this room.');
+  const SecureStore = await import('expo-secure-store');
+  const credential = await SecureStore.getItemAsync(simulatorCredentialKey(roomId, participantId));
+  if (!credential) throw new Error('That simulator participant credential is unavailable.');
+  await SecureStore.setItemAsync(simulatorActiveKey(roomId), participantId);
+}
+
 async function requireLocalParticipant(database: SQLite.SQLiteDatabase, roomId: string) {
   const credential = await getStoredParticipantCredential(roomId);
   if (!credential) throw new Error('This device does not have access to this room.');
