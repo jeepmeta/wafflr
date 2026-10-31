@@ -147,10 +147,49 @@ async function migrate(database: SQLite.SQLiteDatabase) {
   });
 }
 
+async function purgeExpiredLocalRooms(database: SQLite.SQLiteDatabase) {
+  const now = new Date().toISOString();
+  const expired = await database.getAllAsync<{ id: string }>(
+    'SELECT id FROM rooms WHERE expires_at <= ? OR phase = \'expired\'',
+    now,
+  );
+  const expiredIds = expired.map(row => row.id);
+  if (expiredIds.length) {
+    const placeholders = expiredIds.map(() => '?').join(', ');
+    const participants = await database.getAllAsync<{ id: string; room_id: string }>(
+      `SELECT id, room_id FROM participants WHERE room_id IN (${placeholders})`,
+      ...expiredIds,
+    );
+    await database.withTransactionAsync(async () => {
+      await database.runAsync(
+        `DELETE FROM rooms WHERE id IN (${placeholders})`,
+        ...expiredIds,
+      );
+    });
+    const SecureStore = await import('expo-secure-store');
+    await Promise.all([
+      ...expiredIds.map(async roomId => {
+        await SecureStore.deleteItemAsync(`wafflr:participant:${roomId}`);
+        await SecureStore.deleteItemAsync(simulatorActiveKey(roomId));
+      }),
+      ...participants.map(participant =>
+        SecureStore.deleteItemAsync(simulatorCredentialKey(participant.room_id, participant.id)),
+      ),
+    ]);
+    const { removeRoomHistory } = await import('./participant-credentials');
+    await removeRoomHistory(expiredIds);
+  }
+  await database.runAsync(
+    'DELETE FROM room_join_attempts WHERE window_started_at <= ?',
+    new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+  );
+}
+
 export async function getLocalDatabase() {
   if (!databasePromise) {
     databasePromise = SQLite.openDatabaseAsync(DATABASE_NAME).then(async database => {
       await migrate(database);
+      await purgeExpiredLocalRooms(database);
       return database;
     }).catch(error => {
       databasePromise = undefined;
