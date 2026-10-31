@@ -167,7 +167,7 @@ async function purgeExpiredLocalRooms(database: SQLite.SQLiteDatabase) {
       );
     });
     const SecureStore = await import('expo-secure-store');
-    await Promise.all([
+    await Promise.allSettled([
       ...expiredIds.map(async roomId => {
         await SecureStore.deleteItemAsync(`wafflr:participant:${roomId}`);
         await SecureStore.deleteItemAsync(simulatorActiveKey(roomId));
@@ -176,8 +176,12 @@ async function purgeExpiredLocalRooms(database: SQLite.SQLiteDatabase) {
         SecureStore.deleteItemAsync(simulatorCredentialKey(participant.room_id, participant.id)),
       ),
     ]);
-    const { removeRoomHistory } = await import('./participant-credentials');
-    await removeRoomHistory(expiredIds);
+    try {
+      const { removeRoomHistory } = await import('./participant-credentials');
+      await removeRoomHistory(expiredIds);
+    } catch {
+      // Room data is already purged; stale history is harmless and can be cleaned on a later launch.
+    }
   }
   await database.runAsync(
     'DELETE FROM room_join_attempts WHERE window_started_at <= ?',
