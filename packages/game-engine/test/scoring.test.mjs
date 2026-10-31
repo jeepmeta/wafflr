@@ -14,8 +14,8 @@ test("returns zero scores for an empty ballot set", () => {
 
 test("Nah votes do not subtract and missing votes count as zero", () => {
   const scores = calculateApprovalScores(["a", "b", "c"], [
-    { participantId: "one", votes: [{ cardId: "a", choice: "yep" }, { cardId: "b", choice: "nah" }] },
-    { participantId: "two", votes: [{ cardId: "a", choice: "nah" }, { cardId: "b", choice: "yep" }] },
+    { participantId: "one", submittedAt: "2026-01-01T00:00:00.000Z", votes: [{ cardId: "a", choice: "yep" }, { cardId: "b", choice: "nah" }] },
+    { participantId: "two", submittedAt: "2026-01-01T00:00:00.000Z", votes: [{ cardId: "a", choice: "nah" }, { cardId: "b", choice: "yep" }] },
   ]);
   assert.deepEqual(scores, [
     { cardId: "a", yepCount: 1 },
@@ -26,7 +26,7 @@ test("Nah votes do not subtract and missing votes count as zero", () => {
 
 test("counts at most one Yep per card in each ballot", () => {
   const scores = calculateApprovalScores(["a"], [
-    { participantId: "one", votes: [
+    { participantId: "one", submittedAt: "2026-01-01T00:00:00.000Z", votes: [
       { cardId: "a", choice: "yep" },
       { cardId: "a", choice: "yep" },
     ] },
@@ -36,7 +36,7 @@ test("counts at most one Yep per card in each ballot", () => {
 
 test("ignores votes for card IDs outside the deck", () => {
   const scores = calculateApprovalScores(["a"], [
-    { participantId: "one", votes: [{ cardId: "not-in-deck", choice: "yep" }] },
+    { participantId: "one", submittedAt: "2026-01-01T00:00:00.000Z", votes: [{ cardId: "not-in-deck", choice: "yep" }] },
   ]);
   assert.deepEqual(scores, [{ cardId: "a", yepCount: 0 }]);
 });
